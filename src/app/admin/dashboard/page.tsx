@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { 
   LayoutDashboard, 
   Package, 
@@ -63,11 +64,45 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { apiFetch } from "@/lib/api";
-import { useRouter } from "next/navigation";
+
+type TabName = "Overview" | "Products" | "Orders" | "Customers" | "Categories" | "Analytics" | "System Insights" | "Settings" | "Profile";
+
+const TAB_TO_PARAM: Record<TabName, string> = {
+  Overview: "overview",
+  Products: "products",
+  Orders: "orders",
+  Customers: "customers",
+  Categories: "categories",
+  Analytics: "analytics",
+  "System Insights": "system-insights",
+  Settings: "settings",
+  Profile: "profile",
+};
+
+const PARAM_TO_TAB: Record<string, TabName> = Object.fromEntries(
+  Object.entries(TAB_TO_PARAM).map(([k, v]) => [v, k as TabName])
+);
 
 export default function AdminDashboard() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<"Overview" | "Products" | "Orders" | "Customers" | "Categories" | "Analytics" | "System Insights" | "Settings" | "Profile">("Overview");
+  const searchParams = useSearchParams();
+
+  const getTabFromParams = useCallback((): TabName => {
+    const param = searchParams.get("tab") || "overview";
+    return PARAM_TO_TAB[param] || "Overview";
+  }, [searchParams]);
+
+  const [activeTab, setActiveTabState] = useState<TabName>(getTabFromParams);
+
+  const setActiveTab = useCallback((tab: TabName) => {
+    const param = TAB_TO_PARAM[tab];
+    router.push(`/admin/dashboard?tab=${param}`);
+  }, [router]);
+
+  // Sync activeTab state whenever URL changes
+  useEffect(() => {
+    setActiveTabState(getTabFromParams());
+  }, [getTabFromParams]);
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
@@ -414,23 +449,34 @@ export default function AdminDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-xl">
                         <BrainCircuit className="w-5 h-5 text-accent" />
-                        Market Predictions
+                        AI Market Insights
                       </CardTitle>
                     </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="space-y-4">
                       <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <p className="text-sm font-bold text-accent mb-1">Trending Tomorrow</p>
+                        <p className="text-sm font-bold text-accent mb-1">Trend Prediction</p>
                         <p className="text-sm opacity-80 leading-relaxed">
-                          Search intent for "Floral Dresses" has increased by 45% in the last 24 hours. Consider pushing notifications.
+                          {stats?.aiInsights?.prediction || "Loading predictions..."}
                         </p>
                       </div>
                       <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
-                        <p className="text-sm font-bold text-accent mb-1">Price Optimization</p>
+                        <p className="text-sm font-bold text-accent mb-1">
+                          {stats?.aiInsights?.stockRisk > 0 ? "⚠️ Stock Alert" : "✅ Recommendation"}
+                        </p>
                         <p className="text-sm opacity-80 leading-relaxed">
-                          Lowering "Elite Watch" price by 5% could increase volume by 20%, resulting in higher net profit.
+                          {stats?.aiInsights?.recommendation || "Analyzing inventory..."}
                         </p>
                       </div>
-                      <Button className="w-full bg-accent hover:bg-accent/90 text-slate-900 font-bold h-12 rounded-xl mt-4 shadow-lg shadow-accent/20">
+                      {stats?.aiInsights?.stockRisk > 0 && (
+                        <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
+                          <p className="text-xs font-bold text-red-400">
+                            {stats.aiInsights.stockRisk} variant(s) have stock below 5 units
+                          </p>
+                        </div>
+                      )}
+                      <Button
+                        onClick={() => setActiveTab("Analytics")}
+                        className="w-full bg-accent hover:bg-accent/90 text-slate-900 font-bold h-12 rounded-xl mt-4 shadow-lg shadow-accent/20">
                         Run Full Market Analysis
                       </Button>
                     </CardContent>
