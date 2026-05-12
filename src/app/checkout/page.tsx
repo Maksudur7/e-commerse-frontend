@@ -107,7 +107,7 @@ export default function CheckoutPage() {
       const isActuallySuccess = res && (res.success === true || (res.data && res.data.id));
 
       if (isActuallySuccess) {
-        setOrderId(res.data?.id || res.data?.orderNumber || "ORDER-SUCCESS");
+        setOrderId(res.data?.orderNumber || res.data?.id || "ORDER-SUCCESS");
         setIsSuccess(true);
         clearCart();
       } else {
@@ -144,9 +144,9 @@ export default function CheckoutPage() {
                   <p className="text-sm text-muted-foreground font-medium mb-1">Order Tracking ID</p>
                   <p className="text-xl font-mono font-bold tracking-wider">{orderId}</p>
                 </div>
-                <Link href="/admin/dashboard" className="w-full">
+                <Link href="/dashboard/orders" className="w-full">
                   <Button className="w-full h-12 rounded-xl font-bold">
-                    View Orders in Dashboard
+                    View My Orders
                   </Button>
                 </Link>
                 <Link href="/" className="w-full mt-4">

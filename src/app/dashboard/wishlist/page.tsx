@@ -64,7 +64,9 @@ export default function WishlistPage() {
             <Card key={item.id} className="border-none shadow-lg rounded-3xl bg-white dark:bg-slate-900 overflow-hidden group">
               <div className="relative aspect-square overflow-hidden">
                 <img 
-                  src={item.images?.[0] || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"} 
+                  src={item.images?.[0] && item.images[0].startsWith('http') ? item.images[0] : "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"} 
+                  onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"; }}
+                  alt={item.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
                 <Button 
