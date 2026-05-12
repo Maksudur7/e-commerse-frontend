@@ -84,6 +84,7 @@ export default function AdminDashboard() {
     name: "",
     description: "",
     basePrice: "",
+    variantPrice: "",
     stock: "",
     categoryId: "",
     images: [] as string[]
@@ -183,6 +184,7 @@ export default function AdminDashboard() {
           create: [
             {
               sku: `SKU-${Date.now()}`,
+              price: parseFloat(newProduct.variantPrice) || parseFloat(newProduct.basePrice),
               stock: parseInt(newProduct.stock) || 0,
               attributes: {}
             }
@@ -197,7 +199,7 @@ export default function AdminDashboard() {
 
       if (res.success) {
         setIsAddingProduct(false);
-        setNewProduct({ name: "", description: "", basePrice: "", stock: "", categoryId: "", images: [] });
+        setNewProduct({ name: "", description: "", basePrice: "", variantPrice: "", stock: "", categoryId: "", images: [] });
         // Refresh products
         const prodRes = await apiFetch("/admin/products");
         if (prodRes.success) setProducts(prodRes.data);
