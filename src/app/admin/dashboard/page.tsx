@@ -290,17 +290,33 @@ export default function AdminDashboard() {
       });
 
       if (res.success) {
-        setIsAddingCategory(false);
         setNewCategory({ name: "" });
-        // Refresh categories
+        setIsAddingCategory(false);
         const catRes = await apiFetch("/categories");
         if (catRes.success) setCategories(catRes.data);
-      } else {
-        alert("Failed to add category: " + res.message);
       }
     } catch (error: any) {
       console.error("Add category error:", error);
-      alert("Failed to add category: " + (error.message || "Unknown error"));
+      alert("Failed to add category.");
+    }
+  };
+
+  const handleUpdateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      const res = await apiFetch(`/admin/orders/${orderId}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (res.success) {
+        // Update local state to reflect change immediately
+        setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      } else {
+        alert("Failed to update status: " + (res.message || "Unknown error"));
+      }
+    } catch (error: any) {
+      console.error("Update status error:", error);
+      alert("Error updating order status: " + error.message);
     }
   };
 
@@ -455,19 +471,13 @@ export default function AdminDashboard() {
           
           <div className="flex items-center gap-4">
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <div className="relative cursor-pointer">
-                  <Button variant="ghost" size="icon" asChild className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                    <div>
-                      <Bell className="w-5 h-5" />
-                      {unreadCount > 0 && (
-                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white dark:border-slate-900">
-                          {unreadCount > 9 ? '9+' : unreadCount}
-                        </span>
-                      )}
-                    </div>
-                  </Button>
-                </div>
+              <DropdownMenuTrigger className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 outline-none flex items-center justify-center transition-colors">
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white dark:border-slate-900">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 rounded-2xl p-2 glass-card border-none shadow-2xl mt-2">
                 <div className="flex items-center justify-between p-3 border-b border-border/50">
@@ -522,8 +532,8 @@ export default function AdminDashboard() {
 
             
             <DropdownMenu>
-              <DropdownMenuTrigger className="outline-none" asChild>
-                <div className="flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded-full transition-colors cursor-pointer">
+              <DropdownMenuTrigger className="outline-none flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded-full transition-colors cursor-pointer border-none bg-transparent">
+                <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold overflow-hidden">
                     {user?.avatar ? (
                       <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
@@ -982,11 +992,13 @@ export default function AdminDashboard() {
                             <td className="p-4 text-sm font-bold text-primary">${order.total.toFixed(2)}</td>
                             <td className="p-4">
                               <select 
-                                defaultValue={order.status}
-                                className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full outline-none cursor-pointer border-2 ${
+                                value={order.status}
+                                onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                                className={`text-xs font-bold uppercase px-3 py-1.5 rounded-full outline-none cursor-pointer border-2 transition-all ${
                                   order.status === "DELIVERED" ? "bg-green-100 text-green-700 border-green-200" :
                                   order.status === "PROCESSING" ? "bg-blue-100 text-blue-700 border-blue-200" :
                                   order.status === "SHIPPED" ? "bg-purple-100 text-purple-700 border-purple-200" :
+                                  order.status === "CANCELLED" ? "bg-red-100 text-red-700 border-red-200" :
                                   "bg-amber-100 text-amber-700 border-amber-200"
                                 }`}
                               >
@@ -994,6 +1006,7 @@ export default function AdminDashboard() {
                                 <option value="PROCESSING">Processing</option>
                                 <option value="SHIPPED">Shipped</option>
                                 <option value="DELIVERED">Delivered</option>
+                                <option value="CANCELLED">Cancelled</option>
                               </select>
                             </td>
                           </tr>
