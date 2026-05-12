@@ -30,13 +30,12 @@ function TrackingProgress({ status }: { status: string }) {
           <div key={step} className="flex items-center flex-1 last:flex-none">
             <div className="flex flex-col items-center gap-2">
               <div
-                className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${
-                  isCompleted
+                className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-all ${isCompleted
                     ? "bg-indigo-900 border-indigo-900 text-white"
                     : isCurrent
-                    ? "bg-indigo-900 border-indigo-900 text-white"
-                    : "bg-white border-slate-300 text-slate-300"
-                }`}
+                      ? "bg-indigo-900 border-indigo-900 text-white"
+                      : "bg-white border-slate-300 text-slate-300"
+                  }`}
               >
                 {isCompleted ? (
                   <CheckCircle2 className="w-4 h-4" />
@@ -47,18 +46,16 @@ function TrackingProgress({ status }: { status: string }) {
                 )}
               </div>
               <span
-                className={`text-[10px] font-bold uppercase tracking-wide ${
-                  isCompleted || isCurrent ? "text-indigo-900" : "text-slate-400"
-                }`}
+                className={`text-[10px] font-bold uppercase tracking-wide ${isCompleted || isCurrent ? "text-indigo-900" : "text-slate-400"
+                  }`}
               >
                 {step}
               </span>
             </div>
             {i < STATUS_STEPS.length - 1 && (
               <div
-                className={`flex-1 h-0.5 mx-1 mb-5 transition-all ${
-                  i < currentStep ? "bg-indigo-900" : "bg-slate-200"
-                }`}
+                className={`flex-1 h-0.5 mx-1 mb-5 transition-all ${i < currentStep ? "bg-indigo-900" : "bg-slate-200"
+                  }`}
               />
             )}
           </div>
@@ -75,6 +72,8 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<any>(null);
   const [activeFilter, setActiveFilter] = useState("ALL");
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const ordersPerPage = 3;
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -106,6 +105,17 @@ export default function OrdersPage() {
     const matchesSearch = search === "" || o.orderNumber.toLowerCase().includes(search.toLowerCase());
     return matchesFilter && matchesSearch;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * ordersPerPage,
+    currentPage * ordersPerPage
+  );
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, search]);
 
   // Format a short order ID display like "ORD-7X9P2R"
   const formatOrderId = (orderNumber: string) =>
@@ -180,11 +190,10 @@ export default function OrdersPage() {
             <button
               key={f}
               onClick={() => setActiveFilter(f)}
-              className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${
-                activeFilter === f
+              className={`px-4 py-1.5 rounded-full text-xs font-bold border transition-all ${activeFilter === f
                   ? "bg-indigo-900 text-white border-indigo-900"
                   : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300"
-              }`}
+                }`}
             >
               {f}
             </button>
@@ -206,10 +215,10 @@ export default function OrdersPage() {
         {/* Left — Order List */}
         <div className="lg:col-span-2 space-y-3">
           <AnimatePresence>
-            {filteredOrders.length === 0 ? (
+            {paginatedOrders.length === 0 ? (
               <p className="text-center py-12 text-muted-foreground text-sm">No orders match your filter.</p>
             ) : (
-              filteredOrders.map((order) => {
+              paginatedOrders.map((order) => {
                 const isSelected = selectedOrder?.id === order.id;
                 const productNames = order.items
                   ?.map((i: any) => i.variant?.product?.name)
@@ -221,11 +230,10 @@ export default function OrdersPage() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     onClick={() => setSelectedOrder(order)}
-                    className={`p-5 rounded-2xl cursor-pointer transition-all border-2 ${
-                      isSelected
+                    className={`p-5 rounded-2xl cursor-pointer transition-all border-2 ${isSelected
                         ? "border-indigo-900 bg-white dark:bg-slate-800 shadow-md"
                         : "border-transparent bg-white dark:bg-slate-800 hover:border-slate-200 shadow-sm"
-                    }`}
+                      }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <p className="font-bold text-sm text-slate-800 dark:text-white">
@@ -249,6 +257,42 @@ export default function OrdersPage() {
               })
             )}
           </AnimatePresence>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className="rounded-xl h-8 px-3 font-bold"
+              >
+                Prev
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${currentPage === page
+                      ? "bg-indigo-900 text-white shadow-md"
+                      : "bg-white dark:bg-slate-800 text-slate-400 hover:bg-slate-50"
+                    }`}
+                >
+                  {page}
+                </button>
+              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className="rounded-xl h-8 px-3 font-bold"
+              >
+                Next
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Right — Order Details */}
