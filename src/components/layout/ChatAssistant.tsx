@@ -35,30 +35,58 @@ export function ChatAssistant() {
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isTyping) return;
 
     const userMessage: Message = { id: Date.now().toString(), role: "user", content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI Response (In a real app, this calls your AI API backend)
-    setTimeout(() => {
-      setIsTyping(false);
-      
-      let aiResponse = "I can definitely help you find that. Let me check our catalog.";
-      if (userMessage.content.toLowerCase().includes("shoe") || userMessage.content.toLowerCase().includes("sneaker")) {
-        aiResponse = "We have some great Premium Leather Sneakers that just arrived! They are currently highly rated by our customers. Would you like me to show you?";
-      } else if (userMessage.content.toLowerCase().includes("price") || userMessage.content.toLowerCase().includes("cheap")) {
-        aiResponse = "I've filtered the products. We have several options under your budget in the 'Best Sellers' section right now.";
+    try {
+      const response = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: input,
+          messages: messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
+          context: {
+            userProfile: {
+              joinedDate: new Date().toLocaleDateString()
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get response');
       }
+
+      const data = await response.json();
       
+      if (data.success) {
+        setMessages(prev => [...prev, {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: data.data
+        }]);
+      } else {
+        throw new Error(data.message || 'Failed to get AI response');
+      }
+    } catch (error: any) {
+      console.error('Chat error:', error);
       setMessages(prev => [...prev, {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: aiResponse
+        content: "Sorry, I'm having trouble connecting. Please try again later or contact our support team at support@shopease.com 📧"
       }]);
-    }, 1500);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

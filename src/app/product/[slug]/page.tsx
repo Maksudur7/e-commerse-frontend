@@ -26,8 +26,9 @@ export default function ProductDetail() {
       const fetchRelated = async () => {
         try {
           const json = await apiFetch(`/products?category=${product.categoryId}&limit=4`);
-          if (json.success) setRelatedProducts(json.data.filter((p: any) => p.id !== product.id));
+          if (json.success) setRelatedProducts(json.products.filter((p: any) => p.id !== product.id));
         } catch (error) {
+
           console.error("Failed to fetch related products:", error);
         }
       };
@@ -86,17 +87,26 @@ export default function ProductDetail() {
 
   const handleAddToCart = () => {
     if (!product) return;
+    
+    // Find the actual variant ID from the database
+    const matchingVariant = product.variants?.find((v: any) => 
+      v.size === selectedSize && v.color === selectedColor
+    ) || product.variants?.[0]; // Fallback to first variant if no match
+
+    const variantId = matchingVariant?.id || product.id;
+
     addItem({
-      variantId: `${product.id}-${selectedSize}-${selectedColor}`,
+      variantId: variantId,
       productId: product.id,
       name: product.name,
-      price: product.basePrice || 0,
+      price: matchingVariant?.price || product.basePrice || 0,
       image: selectedImage,
       quantity: 1,
       size: selectedSize,
       color: selectedColor,
     });
   };
+
 
   if (loading) {
     return (
@@ -310,9 +320,8 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        </div>
-
         {/* Related Products */}
+
         <div className="mt-32">
           <div className="flex items-center justify-between mb-12">
             <h2 className="text-3xl font-heading font-black text-foreground">

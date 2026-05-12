@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { useCartStore } from "@/store/useCartStore";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, CreditCard, ShieldCheck, Truck, CheckCircle2, Loader2, ShoppingCart } from "lucide-react";
+import { ArrowRight, CreditCard, ShieldCheck, Truck, CheckCircle2, Loader2, ShoppingCart, Trash2 } from "lucide-react";
+
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -26,7 +28,8 @@ const checkoutSchema = z.object({
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
-  const { items, total, clearCart } = useCartStore();
+  const { items, total, clearCart, removeItem } = useCartStore();
+
   const subtotal = total();
   const shipping = items.length > 0 ? 15.0 : 0;
   const grandTotal = subtotal + shipping;
@@ -35,6 +38,14 @@ export default function CheckoutPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [orderId, setOrderId] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  if (!isMounted) return null;
+
 
   const {
     register,
@@ -217,12 +228,23 @@ export default function CheckoutPage() {
               <CardContent className="p-6 space-y-6 bg-card">
                 <div className="max-h-60 overflow-auto space-y-4 pr-2 custom-scrollbar">
                   {items.map((item) => (
-                    <div key={item.variantId} className="flex gap-4">
+                    <div key={item.variantId} className="flex gap-4 group/item">
                       <div className="w-16 h-16 rounded-xl border border-border/50 bg-slate-50 overflow-hidden shrink-0">
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                        <img src={item.image || "https://images.unsplash.com/photo-1595950653106-6c9ebd614c3a"} alt={item.name} className="w-full h-full object-cover" />
+
                       </div>
                       <div className="flex-1 min-w-0 flex flex-col justify-center">
-                        <p className="font-bold text-sm line-clamp-1 text-foreground">{item.name}</p>
+                        <div className="flex justify-between items-start">
+                          <p className="font-bold text-sm line-clamp-1 text-foreground flex-1">{item.name}</p>
+                          <button 
+                            type="button"
+                            onClick={() => removeItem(item.variantId)}
+                            className="text-muted-foreground hover:text-destructive p-1 transition-colors opacity-0 group-hover/item:opacity-100"
+                            title="Remove item"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {item.color && <span className="mr-2">Color: {item.color}</span>}
                           {item.size && <span>Size: {item.size}</span>}
@@ -233,6 +255,7 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     </div>
+
                   ))}
                   {items.length === 0 && (
                     <div className="text-center py-8">

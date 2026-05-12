@@ -5,7 +5,11 @@ import { Star, ShoppingCart, Heart, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { apiFetch } from "@/lib/api";
+
+
 
 interface ProductCardProps {
   id: string;
@@ -33,24 +37,37 @@ export function ProductCard({
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
 
+  const router = useRouter();
   const toggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/auth/login");
+      return;
+    }
+
     // Optimistic Update
     const previousState = isWishlisted;
     setIsWishlisted(!previousState);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      // In a real app: await api.toggleWishlist(id);
+      const res = await apiFetch("/wishlist/toggle", {
+        method: "POST",
+        body: JSON.stringify({ productId: id })
+      });
+      
+      if (!res.success) {
+        setIsWishlisted(previousState);
+      }
     } catch (error) {
       // Rollback on failure
       setIsWishlisted(previousState);
-      alert("Failed to update wishlist. Please try again.");
+      console.error("Wishlist error:", error);
     }
   };
+
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -14,7 +14,9 @@ import { apiFetch } from "@/lib/api";
 export default function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
   const [latestProducts, setLatestProducts] = useState<any[]>([]);
+  const [popularProducts, setPopularProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
   const [timeLeft, setTimeLeft] = useState({ hours: 24, minutes: 0, seconds: 0 });
 
   useEffect(() => {
@@ -25,8 +27,13 @@ export default function Home() {
         if (featuredJson.success) setFeaturedProducts(featuredJson.products || []);
 
         // Fetch latest products
-        const latestJson = await apiFetch("/products?limit=8");
+        const latestJson = await apiFetch("/products?limit=4");
         if (latestJson.success) setLatestProducts(latestJson.products || []);
+
+        // Fetch popular products (sorted by review count)
+        const popularJson = await apiFetch("/products?sortBy=popular&limit=4");
+        if (popularJson.success) setPopularProducts(popularJson.products || []);
+
       } catch (error) {
         console.error("Failed to fetch dynamic content:", error);
       } finally {
@@ -114,7 +121,7 @@ export default function Home() {
               Array(4).fill(0).map((_, i) => (
                 <div key={i} className="h-[350px] bg-[#EFE3CA]/40 rounded-3xl animate-pulse" />
               ))
-            ) : latestProducts.slice(0, 4).map((product) => (
+            ) : latestProducts.map((product) => (
               <ProductCard 
                 key={product.id} 
                 id={product.id}
@@ -187,7 +194,7 @@ export default function Home() {
               Array(4).fill(0).map((_, i) => (
                 <div key={i} className="h-[350px] bg-[#EFE3CA]/15 rounded-3xl animate-pulse" />
               ))
-            ) : latestProducts.slice(4, 8).map((product) => (
+            ) : (popularProducts.length > 0 ? popularProducts : latestProducts).map((product) => (
               <ProductCard 
                 key={product.id} 
                 id={product.id}
@@ -200,6 +207,8 @@ export default function Home() {
               />
             ))}
           </div>
+
+
         </div>
       </section>
 

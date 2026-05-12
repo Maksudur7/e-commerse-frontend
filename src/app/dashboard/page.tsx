@@ -7,9 +7,20 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Package, MapPin, Search, Edit2, Camera, CheckCircle2, Circle, Truck, Clock, Heart, Trash2, Plus } from "lucide-react";
+import { User, Package, MapPin, Search, Edit2, Camera, CheckCircle2, Circle, Truck, Clock, Heart, Trash2, Plus, X } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useCartStore } from "@/store/useCartStore";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+
+
 
 const ORDER_STATUS_STEPS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED"];
 
@@ -54,10 +65,14 @@ export default function CustomerDashboard() {
         const addressesJson = await apiFetch("/users/addresses");
         if (addressesJson.success) setAddresses(addressesJson.addresses || []);
 
-        // Initialize empty wishlist for now
-        setWishlist([]);
+        // Fetch Wishlist
+        const wishlistJson = await apiFetch("/wishlist");
+        if (wishlistJson.success) {
+          setWishlist(wishlistJson.data || []);
+        }
 
       } catch (error) {
+
         console.error("Dashboard fetch error:", error);
       } finally {
         setLoading(false);
@@ -73,10 +88,65 @@ export default function CustomerDashboard() {
     }
   }, [tabParam]);
 
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [newAddress, setNewAddress] = useState({
+    type: "Home",
+    address: "",
+    city: "",
+    zip: "",
+    isDefault: false
+  });
+
+  const handleAddAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsUpdating(true);
+    try {
+      const res = await apiFetch("/users/addresses", {
+        method: "POST",
+        body: JSON.stringify(newAddress)
+      });
+      if (res.success) {
+        setAddresses(res.addresses);
+        setIsAddressModalOpen(false);
+        setNewAddress({ type: "Home", address: "", city: "", zip: "", isDefault: false });
+        alert("Address added successfully!");
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to add address");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleTabChange = (tab: typeof activeTab) => {
+
     setActiveTab(tab);
     router.push(`/dashboard?tab=${tab}`, { scroll: false });
   };
+
+  const handleUpdateProfile = async () => {
+    setIsUpdating(true);
+    try {
+      const res = await apiFetch("/users/profile", {
+        method: "PUT",
+        body: JSON.stringify({
+          name: user.name,
+          phone: user.phone,
+        })
+      });
+      if (res.success) {
+        alert("Profile updated successfully!");
+        localStorage.setItem("user", JSON.stringify(res.user));
+      }
+    } catch (error: any) {
+      alert(error.message || "Failed to update profile");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = orderFilter === "ALL" || order.status === orderFilter;
@@ -94,8 +164,47 @@ export default function CustomerDashboard() {
     return "PENDING";
   };
 
+  const addItem = useCartStore((state) => state.addItem);
+
+  const removeFromWishlist = async (productId: string) => {
+    try {
+      const res = await apiFetch("/wishlist/toggle", {
+        method: "POST",
+        body: JSON.stringify({ productId })
+      });
+      if (res.success) {
+        setWishlist(prev => prev.filter(item => item.id !== productId));
+      }
+    } catch (error) {
+      console.error("Remove from wishlist error:", error);
+    }
+  };
+
+  const handleWishlistAddToCart = (product: any) => {
+    if (!product.variants || product.variants.length === 0) {
+      alert("This product is currently unavailable.");
+      return;
+    }
+    
+    // Pick the first variant as default
+    const variant = product.variants[0];
+    addItem({
+      id: variant.id,
+      productId: product.id,
+      name: product.name,
+      price: variant.price,
+      image: product.images?.[0] || "",
+      quantity: 1,
+      variantId: variant.id,
+      color: variant.color,
+      size: variant.size,
+    });
+    alert(`${product.name} added to cart!`);
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 dark:bg-slate-950 pb-20">
+
       <Navbar />
 
       <div className="container mx-auto px-4 pt-32">
@@ -223,7 +332,8 @@ export default function CustomerDashboard() {
                                 {order.status}
                               </Badge>
                             </div>
-                            <p className="font-extrabold text-primary">${order.total.toFixed(2)}</p>
+                            <p className="font-extrabold text-primary">${(order.totalAmount || 0).toFixed(2)}</p>
+
                             <p className="text-xs text-muted-foreground mt-2 line-clamp-1">
                               {order.items.map(i => i.name).join(", ")}
                             </p>
@@ -289,16 +399,19 @@ export default function CustomerDashboard() {
                                 <div key={idx} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
                                   <div>
                                     <p className="font-semibold text-sm text-foreground">{item.name}</p>
-                                    <p className="text-xs text-muted-foreground">Qty: {item.qty}</p>
+                                    <p className="text-xs text-muted-foreground">Qty: {item.quantity || item.qty}</p>
+
                                   </div>
-                                  <p className="font-bold text-primary">${item.price?.toFixed(2)}</p>
+                                  <p className="font-bold text-primary">${(item.price || 0).toFixed(2)}</p>
+
                                 </div>
                               ))}
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-border/50 flex justify-between items-center">
                               <p className="font-bold text-muted-foreground">Total Amount</p>
-                              <p className="text-2xl font-extrabold text-foreground">${activeOrderDetails?.total?.toFixed(2)}</p>
+                              <p className="text-2xl font-extrabold text-foreground">${(activeOrderDetails.totalAmount || 0).toFixed(2)}</p>
+
                             </div>
                           </CardContent>
                         </Card>
@@ -352,10 +465,15 @@ export default function CustomerDashboard() {
                       </div>
 
                       <div className="pt-8 border-t border-border">
-                        <Button className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-transform">
-                          Save Changes
+                        <Button 
+                          className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20 hover:-translate-y-1 transition-transform"
+                          onClick={handleUpdateProfile}
+                          disabled={isUpdating}
+                        >
+                          {isUpdating ? "Saving..." : "Save Changes"}
                         </Button>
                       </div>
+
                     </CardContent>
                   </Card>
                 </motion.div>
@@ -389,11 +507,23 @@ export default function CustomerDashboard() {
                               <p className="font-extrabold text-lg mt-1">${(item.basePrice || item.price || 0).toFixed(2)}</p>
                             </div>
                             <div className="flex gap-2">
-                              <Button size="sm" className="h-8 rounded-lg text-[10px] font-bold flex-1">Add to Cart</Button>
-                              <Button size="sm" variant="ghost" className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                              <Button 
+                                size="sm" 
+                                className="h-8 rounded-lg text-[10px] font-bold flex-1"
+                                onClick={() => handleWishlistAddToCart(item)}
+                              >
+                                Add to Cart
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="ghost" 
+                                className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => removeFromWishlist(item.id)}
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
                             </div>
+
                           </div>
                         </CardContent>
                       </Card>
@@ -419,10 +549,14 @@ export default function CustomerDashboard() {
                 >
                   <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm">
                     <h2 className="text-2xl font-bold">Saved Addresses</h2>
-                    <Button className="rounded-xl font-bold gap-2">
+                    <Button 
+                      className="rounded-xl font-bold gap-2"
+                      onClick={() => setIsAddressModalOpen(true)}
+                    >
                       <Plus className="w-4 h-4" /> Add New Address
                     </Button>
                   </div>
+
 
                   <div className="grid sm:grid-cols-2 gap-6">
                     {loading ? (
@@ -469,6 +603,86 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </div>
+
+      <Dialog open={isAddressModalOpen} onOpenChange={setIsAddressModalOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">Add New Address</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleAddAddress} className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <Label className="font-bold">Address Type</Label>
+              <div className="flex gap-2">
+                {["Home", "Office", "Other"].map((t) => (
+                  <Button
+                    key={t}
+                    type="button"
+                    variant={newAddress.type === t ? "default" : "outline"}
+                    className="rounded-xl font-bold flex-1"
+                    onClick={() => setNewAddress({ ...newAddress, type: t })}
+                  >
+                    {t}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="font-bold">Street Address</Label>
+              <Input
+                required
+                value={newAddress.address}
+                onChange={(e) => setNewAddress({ ...newAddress, address: e.target.value })}
+                placeholder="123 Street Name"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="font-bold">City</Label>
+                <Input
+                  required
+                  value={newAddress.city}
+                  onChange={(e) => setNewAddress({ ...newAddress, city: e.target.value })}
+                  placeholder="New York"
+                  className="rounded-xl h-12 bg-slate-50 border-none"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="font-bold">Zip Code</Label>
+                <Input
+                  required
+                  value={newAddress.zip}
+                  onChange={(e) => setNewAddress({ ...newAddress, zip: e.target.value })}
+                  placeholder="10001"
+                  className="rounded-xl h-12 bg-slate-50 border-none"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pt-2">
+              <input
+                type="checkbox"
+                id="isDefault"
+                checked={newAddress.isDefault}
+                onChange={(e) => setNewAddress({ ...newAddress, isDefault: e.target.checked })}
+                className="w-4 h-4 rounded text-primary focus:ring-primary border-slate-300"
+              />
+              <label htmlFor="isDefault" className="text-sm font-medium cursor-pointer">
+                Set as default address
+              </label>
+            </div>
+            <DialogFooter className="pt-6">
+              <Button 
+                type="submit" 
+                className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20"
+                disabled={isUpdating}
+              >
+                {isUpdating ? "Saving..." : "Save Address"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </main>
+
   );
 }

@@ -114,6 +114,9 @@ export default function AdminDashboard() {
   const [customers, setCustomers] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+
 
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -144,10 +147,25 @@ export default function AdminDashboard() {
       setUser(parsedUser);
     };
 
+    const fetchNotifications = async () => {
+      try {
+        const res = await apiFetch("/notifications");
+        if (res.success) {
+          setNotifications(res.data);
+          setUnreadCount(res.data.filter((n: any) => !n.isRead).length);
+        }
+      } catch (error) {
+        console.error("Notifications fetch error:", error);
+      }
+    };
+
     const fetchStats = async () => {
+      setLoading(true);
       try {
         const res = await apiFetch("/admin/stats");
-        if (res.success) setStats(res.data);
+        if (res.success) {
+          setStats(res.data);
+        }
       } catch (error) {
         console.error("Stats fetch error:", error);
       } finally {
@@ -156,8 +174,15 @@ export default function AdminDashboard() {
     };
 
     checkAuth();
+
     fetchStats();
+    fetchNotifications();
+    
+    // Poll for notifications every 30 seconds
+    const interval = setInterval(fetchNotifications, 30000);
+    return () => clearInterval(interval);
   }, [router]);
+
 
   useEffect(() => {
     const fetchTabData = async () => {
@@ -284,6 +309,31 @@ export default function AdminDashboard() {
     window.location.href = "/auth/login";
   };
 
+  const markNotificationRead = async (id: string) => {
+    try {
+      const res = await apiFetch(`/notifications/${id}/read`, { method: "PATCH" });
+      if (res.success) {
+        setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error("Failed to mark read:", error);
+    }
+  };
+
+  const markAllNotificationsRead = async () => {
+    try {
+      const res = await apiFetch("/notifications/mark-all-read", { method: "POST" });
+      if (res.success) {
+        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+      }
+    } catch (error) {
+      console.error("Failed to mark all read:", error);
+    }
+  };
+
+
   if (loading && !stats) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
@@ -349,11 +399,68 @@ export default function AdminDashboard() {
           </div>
           
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white dark:border-slate-900">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-80 rounded-2xl p-2 glass-card border-none shadow-2xl mt-2">
+                <div className="flex items-center justify-between p-3 border-b border-border/50">
+                  <span className="font-heading font-bold">Notifications</span>
+                  {unreadCount > 0 && (
+                    <Button variant="ghost" size="sm" className="text-xs h-8 text-primary font-bold hover:text-primary hover:bg-primary/5" onClick={markAllNotificationsRead}>
+                      Mark all as read
+                    </Button>
+                  )}
+                </div>
+                <div className="max-h-[400px] overflow-auto py-2">
+                  {notifications.length > 0 ? (
+                    notifications.map((notification) => (
+                      <DropdownMenuItem 
+                        key={notification.id} 
+                        className={`p-3 rounded-xl cursor-pointer mb-1 flex flex-col items-start gap-1 transition-all ${!notification.isRead ? 'bg-primary/5 border-l-4 border-primary' : 'hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}
+                        onClick={() => {
+                          markNotificationRead(notification.id);
+                          if (notification.link) router.push(notification.link);
+                        }}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            notification.type === 'SUCCESS' ? 'bg-green-100 text-green-700' :
+                            notification.type === 'ALERT' ? 'bg-red-100 text-red-700' :
+                            'bg-blue-100 text-blue-700'
+                          }`}>
+                            {notification.type}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {new Date(notification.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
+                        <p className="text-sm font-bold leading-tight">{notification.title}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2">{notification.message}</p>
+                      </DropdownMenuItem>
+                    ))
+                  ) : (
+                    <div className="p-8 text-center text-muted-foreground">
+                      <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                      <p className="text-sm">No notifications yet</p>
+                    </div>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="justify-center text-xs text-primary font-bold py-2.5 rounded-xl cursor-pointer">
+                  View all activity
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <div className="w-px h-6 bg-border" />
+
             
             <DropdownMenu>
               <DropdownMenuTrigger className="outline-none">
@@ -525,7 +632,7 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full"><Edit className="w-4 h-4 text-blue-500" /></Button>
+                                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full" onClick={() => router.push(`/admin/product/${p.id}/edit`)}><Edit className="w-4 h-4 text-blue-500" /></Button>
                                     <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full"><Trash2 className="w-4 h-4 text-red-500" /></Button>
                                   </div>
                                 </td>
@@ -715,7 +822,7 @@ export default function AdminDashboard() {
                                 </td>
                                 <td className="p-4 text-right">
                                   <div className="flex justify-end gap-2">
-                                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full"><Edit className="w-4 h-4 text-blue-500" /></Button>
+                                    <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full" onClick={() => router.push(`/admin/category/${cat.id}/edit`)}><Edit className="w-4 h-4 text-blue-500" /></Button>
                                     <Button variant="ghost" size="icon" className="w-8 h-8 rounded-full"><Trash2 className="w-4 h-4 text-red-500" /></Button>
                                   </div>
                                 </td>
