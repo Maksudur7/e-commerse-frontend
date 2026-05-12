@@ -5,34 +5,50 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { ArrowRight, LogIn, Sparkles, ShieldCheck } from "lucide-react";
+import { ArrowRight, UserPlus, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
-import { apiFetch } from "@/lib/api";
 
-export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+export default function RegisterPage() {
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: ""
+  });
+
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleDemoLogin = () => {
-    setEmail("admin@shopease.ai");
-    setPassword("password123");
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      alert("Passwords do not match");
+      return;
+    }
     setIsLoading(true);
     try {
-      const data = await apiFetch("/auth/login", {
+      const res = await fetch("http://localhost:5000/api/auth/register", {
         method: "POST",
-        body: JSON.stringify({ email, password }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        }),
       });
-      
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.location.href = data.user.role === "ADMIN" ? "/admin/dashboard" : "/dashboard";
-    } catch (error: any) {
-      alert(error.message || "Something went wrong. Please try again.");
+      const data = await res.json();
+      if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        window.location.href = "/dashboard";
+      } else {
+        alert(data.message || "Registration failed");
+      }
+    } catch (error) {
+      alert("Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -57,60 +73,81 @@ export default function LoginPage() {
               <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white font-bold text-xl group-hover:scale-110 transition-transform">S</div>
               <span className="text-2xl font-heading font-extrabold text-[#170C79] dark:text-white">ShopEase</span>
             </Link>
-            <CardTitle className="text-3xl font-heading font-black mb-2">Welcome Back</CardTitle>
-            <CardDescription className="font-medium">Experience the next generation of e-commerce</CardDescription>
+            <CardTitle className="text-3xl font-heading font-black mb-2">Join the Future</CardTitle>
+            <CardDescription className="font-medium">Start your artisanal shopping journey today</CardDescription>
           </CardHeader>
           
           <CardContent className="p-8 space-y-5">
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="space-y-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-widest mb-2 ml-1 text-muted-foreground">Email Address</p>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-2 ml-1 text-muted-foreground">Full Name</p>
                   <Input 
-                    type="email" 
+                    name="name"
                     required
-                    placeholder="name@example.com" 
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Enter your name" 
+                    value={formData.name}
+                    onChange={handleChange}
                     className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium focus:ring-2 focus:ring-primary"
                   />
                 </div>
                 <div>
-                  <div className="flex justify-between items-center mb-2 ml-1">
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Password</p>
-                    <Link href="/auth/forgot-password" weight="bold" className="text-[10px] font-bold text-primary hover:underline">Forgot password?</Link>
-                  </div>
+                  <p className="text-xs font-bold uppercase tracking-widest mb-2 ml-1 text-muted-foreground">Email Address</p>
                   <Input 
-                    type="password" 
+                    name="email"
+                    type="email" 
                     required
-                    placeholder="••••••••" 
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="name@example.com" 
+                    value={formData.email}
+                    onChange={handleChange}
                     className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium focus:ring-2 focus:ring-primary"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest mb-2 ml-1 text-muted-foreground">Password</p>
+                    <Input 
+                      name="password"
+                      type="password" 
+                      required
+                      placeholder="••••••••" 
+                      value={formData.password}
+                      onChange={handleChange}
+                      className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest mb-2 ml-1 text-muted-foreground">Confirm</p>
+                    <Input 
+                      name="confirmPassword"
+                      type="password" 
+                      required
+                      placeholder="••••••••" 
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 py-2">
+                <ShieldCheck className="w-4 h-4 text-green-500" />
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Secure, encrypted connection</p>
               </div>
 
               <Button 
-                type="submit" 
+                type="submit"
                 disabled={isLoading}
                 className="w-full h-14 rounded-2xl text-lg font-black gap-2 shadow-lg shadow-primary/20 hover:-translate-y-1 transition-all"
               >
-                {isLoading ? "Signing In..." : "Sign In"} <LogIn className="w-5 h-5" />
+                {isLoading ? "Creating..." : "Create Account"} <UserPlus className="w-5 h-5" />
               </Button>
             </form>
 
-            <Button 
-              variant="outline" 
-              onClick={handleDemoLogin}
-              className="w-full h-12 rounded-2xl border-2 border-primary/20 bg-primary/5 text-primary font-black gap-2 hover:bg-primary/10 transition-all group"
-            >
-              <Sparkles className="w-4 h-4 group-hover:animate-pulse" /> Try Demo Login
-            </Button>
-
             <div className="relative py-4">
               <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-200 dark:border-slate-800" /></div>
-              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest"><span className="bg-white dark:bg-slate-900 px-4 text-muted-foreground">Social Connect</span></div>
+              <div className="relative flex justify-center text-[10px] font-black uppercase tracking-widest"><span className="bg-white dark:bg-slate-900 px-4 text-muted-foreground">Quick Signup</span></div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
@@ -132,9 +169,9 @@ export default function LoginPage() {
             </div>
 
             <p className="text-center text-sm text-muted-foreground mt-8 font-medium">
-              Don't have an account?{" "}
-              <Link href="/auth/register" className="text-primary font-black hover:underline">
-                Create Account
+              Already a member?{" "}
+              <Link href="/auth/login" className="text-primary font-black hover:underline">
+                Sign In
               </Link>
             </p>
           </CardContent>

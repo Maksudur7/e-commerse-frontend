@@ -16,6 +16,7 @@ import {
 import { useCartStore } from "@/store/useCartStore";
 import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -24,18 +25,70 @@ export function Navbar() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [showAiResults, setShowAiResults] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    const userData = localStorage.getItem("user");
+    if (token && userData) {
+      setIsLoggedIn(true);
+      setUser(JSON.parse(userData));
+    } else {
+      setIsLoggedIn(false);
+      setUser(null);
+    }
+
+    // Fetch dynamic categories
+    const fetchCategories = async () => {
+      try {
+        const res = await apiFetch("/categories");
+        if (res.success) setCategories(res.data || []);
+      } catch (error) {
+        console.error("Navbar categories error:", error);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false);
+    setUser(null);
+    window.location.href = "/auth/login";
+  };
+
+  const [aiSearchResults, setAiSearchResults] = useState<any[]>([]);
+  const [aiIntent, setAiIntent] = useState("");
+
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
     
     setIsAiSearching(true);
     setShowAiResults(true);
     
-    // Simulate system parsing natural language
-    setTimeout(() => {
+    try {
+      const res = await apiFetch("/ai/search", {
+        method: "POST",
+        body: JSON.stringify({ query: searchQuery })
+      });
+      
+      if (res.success) {
+        setAiIntent(res.data?.intent || `Search: ${searchQuery}`);
+        // For demonstration, we'll fetch products based on the search intent or just the query
+        const prodRes = await apiFetch(`/products?search=${searchQuery}&limit=3`);
+        if (prodRes.success) setAiSearchResults(prodRes.products || []);
+      }
+    } catch (error) {
+      console.error("AI Search error:", error);
+    } finally {
       setIsAiSearching(false);
-    }, 1500);
+    }
   };
 
   useEffect(() => {
@@ -78,15 +131,21 @@ export function Navbar() {
               Collections <ChevronDown className="w-4 h-4 opacity-70" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56 rounded-2xl glass-card">
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/shop?category=Electronics" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Electronics</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/shop?category=Apparel" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Fashion & Apparel</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/shop?category=Home%20&%20Living" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Home & Living</Link>
-              </DropdownMenuItem>
+              {categories.length > 0 ? categories.map((cat) => (
+                <DropdownMenuItem key={cat.id} className="p-0 cursor-pointer">
+                  <Link href={`/shop?category=${cat.slug}`} className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors capitalize">{cat.name}</Link>
+                </DropdownMenuItem>
+              )) : (
+                <>
+                  <DropdownMenuItem className="p-0 cursor-pointer">
+                    <Link href="/shop?category=Electronics" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Electronics</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="p-0 cursor-pointer">
+                    <Link href="/shop?category=Fashion" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Fashion</Link>
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator />
               <DropdownMenuItem className="p-0 cursor-pointer text-primary font-medium">
                 <Link href="/stylist" className="w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Expert Curated</Link>
               </DropdownMenuItem>
@@ -138,14 +197,22 @@ export function Navbar() {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      <p className="text-xs text-muted-foreground mb-3">Extracted intent: Color (Blue), Category (Shoes), Price (&lt;$50)</p>
-                      <div className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors">
-                        <div className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden"><img src="https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200" className="w-full h-full object-cover" /></div>
-                        <div>
-                          <p className="text-sm font-bold">Ocean Blue Runners</p>
-                          <p className="text-xs text-primary font-bold">$49.99</p>
-                        </div>
-                      </div>
+                      <p className="text-xs text-muted-foreground mb-3 italic">Parsed Intent: {aiIntent}</p>
+                      {aiSearchResults.length > 0 ? aiSearchResults.map((prod) => (
+                        <Link key={prod.id} href={`/product/${prod.slug}`} onClick={() => setShowAiResults(false)}>
+                          <div className="flex items-center gap-3 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded-xl cursor-pointer transition-colors mb-1">
+                            <div className="w-12 h-12 bg-slate-200 rounded-lg overflow-hidden shrink-0">
+                              <img src={prod.images?.[0] || "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=200"} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold truncate">{prod.name}</p>
+                              <p className="text-xs text-primary font-bold">${prod.basePrice}</p>
+                            </div>
+                          </div>
+                        </Link>
+                      )) : (
+                        <p className="text-xs text-muted-foreground text-center py-2">No matching products found.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -174,35 +241,100 @@ export function Navbar() {
             </AnimatePresence>
           </Link>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full hover:bg-muted h-10 w-10 hidden sm:flex outline-none">
-              <User className="w-5 h-5" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 glass-card">
-              <div className="px-2 py-1.5 text-sm font-semibold font-heading">My Account</div>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/dashboard" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/dashboard" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Orders</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="p-0 cursor-pointer">
-                <Link href="/dashboard" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Wishlist</Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive cursor-pointer py-2 focus:bg-destructive/10 focus:text-destructive">
-                <LogOut className="w-4 h-4 mr-2" />
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {isLoggedIn ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full hover:bg-muted h-10 w-10 hidden sm:flex outline-none">
+                <User className="w-5 h-5" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 glass-card">
+                <div className="px-2 py-1.5 text-sm font-bold font-heading text-primary">{user?.name || "My Account"}</div>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="p-0 cursor-pointer">
+                  <Link href="/dashboard?tab=profile" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="p-0 cursor-pointer">
+                  <Link href="/dashboard?tab=orders" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Orders</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem className="p-0 cursor-pointer">
+                  <Link href="/dashboard?tab=wishlist" className="flex w-full px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Wishlist</Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  className="text-destructive cursor-pointer py-2 focus:bg-destructive/10 focus:text-destructive"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link href="/auth/login" className="hidden sm:block">
+              <Button className="rounded-full px-6 font-bold h-10">Sign In</Button>
+            </Link>
+          )}
 
-          <Button variant="ghost" size="icon" className="lg:hidden rounded-full h-10 w-10">
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="lg:hidden rounded-full h-10 w-10"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
             <Menu className="w-5 h-5" />
           </Button>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40 lg:hidden"
+            />
+            <motion.div
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="fixed right-0 top-0 h-full w-[300px] bg-white dark:bg-slate-900 shadow-2xl z-50 lg:hidden p-6"
+            >
+              <div className="flex flex-col gap-6 pt-12">
+                <Link href="/new" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  New Arrivals
+                </Link>
+                <Link href="/shop" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  Collections
+                </Link>
+                <Link href="/about" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  About Us
+                </Link>
+                <div className="h-px bg-border my-2" />
+                <Link href="/dashboard?tab=profile" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  My Profile
+                </Link>
+                <Link href="/dashboard?tab=orders" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  My Orders
+                </Link>
+                <Link href="/dashboard?tab=wishlist" className="text-lg font-bold hover:text-primary transition-colors" onClick={() => setIsMobileMenuOpen(false)}>
+                  Wishlist
+                </Link>
+                <Button 
+                  variant="destructive" 
+                  className="mt-4 rounded-xl font-bold justify-start"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="w-4 h-4 mr-2" /> Logout
+                </Button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.nav>
   );
 }

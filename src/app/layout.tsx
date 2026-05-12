@@ -18,8 +18,30 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "ShopEase | Premium E-commerce Experience",
-  description: "Advanced e-commerce ecosystem for high performance and personalized shopping.",
+  title: {
+    default: "ShopEase | Premium Artisanal E-commerce",
+    template: "%s | ShopEase"
+  },
+  description: "Advanced AI-powered e-commerce ecosystem for high performance and personalized shopping.",
+  keywords: ["e-commerce", "artisanal", "AI shopping", "premium fashion", "smart recommendations"],
+  authors: [{ name: "ShopEase Team" }],
+  manifest: "/manifest.json",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://shopease-ai.vercel.app",
+    siteName: "ShopEase",
+    title: "ShopEase | Premium Artisanal E-commerce",
+    description: "Discover curated artisanal pieces powered by AI.",
+    images: [{ url: "https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1200", width: 1200, height: 630 }]
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ShopEase | Premium AI E-commerce",
+    description: "The future of artisanal shopping is here.",
+    images: ["https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1200"],
+    creator: "@shopease"
+  }
 };
 
 export default function RootLayout({

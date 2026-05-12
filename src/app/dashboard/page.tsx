@@ -1,60 +1,90 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Navbar } from "@/components/layout/Navbar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { User, Package, MapPin, Search, Edit2, Camera, CheckCircle2, Circle, Truck, Clock } from "lucide-react";
+import { User, Package, MapPin, Search, Edit2, Camera, CheckCircle2, Circle, Truck, Clock, Heart, Trash2, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
-const MOCK_ORDERS = [
-  {
-    id: "ORD-7X9P2R",
-    date: "May 08, 2026",
-    total: 245.0,
-    status: "PROCESSING", // PENDING, PROCESSING, SHIPPED, DELIVERED
-    items: [
-      { name: "Minimalist Leather Sneakers", qty: 1, price: 120.0 },
-      { name: "Cotton Crewneck T-Shirt", qty: 2, price: 62.5 }
-    ]
-  },
-  {
-    id: "ORD-3B8M4K",
-    date: "April 22, 2026",
-    total: 89.99,
-    status: "SHIPPED",
-    items: [
-      { name: "Wireless Earbuds Pro", qty: 1, price: 89.99 }
-    ]
-  },
-  {
-    id: "ORD-9C2L5N",
-    date: "March 15, 2026",
-    total: 350.0,
-    status: "DELIVERED",
-    items: [
-      { name: "Ergonomic Office Chair", qty: 1, price: 350.0 }
-    ]
-  }
-];
+import { apiFetch } from "@/lib/api";
 
 const ORDER_STATUS_STEPS = ["PENDING", "PROCESSING", "SHIPPED", "DELIVERED"];
 
 export default function CustomerDashboard() {
-  const [activeTab, setActiveTab] = useState<"orders" | "profile">("orders");
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const tabParam = searchParams.get("tab") as any;
+  
+  const [activeTab, setActiveTab] = useState<"orders" | "profile" | "wishlist" | "addresses">("orders");
   const [orderFilter, setOrderFilter] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedOrder, setSelectedOrder] = useState<string | null>(MOCK_ORDERS[0].id);
+  const [selectedOrder, setSelectedOrder] = useState<string | null>(null);
 
-  const filteredOrders = MOCK_ORDERS.filter(order => {
+  const [user, setUser] = useState<any>(null);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [wishlist, setWishlist] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/auth/login");
+        return;
+      }
+
+      try {
+        // Fetch Profile
+        const profileJson = await apiFetch("/users/profile");
+        if (profileJson.success) setUser(profileJson.user);
+
+        // Fetch Orders
+        const ordersJson = await apiFetch("/cart-orders/orders/me");
+        if (ordersJson.status === 'success' || ordersJson.success) {
+          const orderList = ordersJson.data || ordersJson.orders || [];
+          setOrders(orderList);
+          if (orderList.length > 0) setSelectedOrder(orderList[0].id);
+        }
+
+        // Fetch Addresses
+        const addressesJson = await apiFetch("/users/addresses");
+        if (addressesJson.success) setAddresses(addressesJson.addresses || []);
+
+        // Initialize empty wishlist for now
+        setWishlist([]);
+
+      } catch (error) {
+        console.error("Dashboard fetch error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [router]);
+
+  useEffect(() => {
+    if (tabParam && ["orders", "profile", "wishlist", "addresses"].includes(tabParam)) {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
+
+  const handleTabChange = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    router.push(`/dashboard?tab=${tab}`, { scroll: false });
+  };
+
+  const filteredOrders = orders.filter(order => {
     const matchesFilter = orderFilter === "ALL" || order.status === orderFilter;
-    const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = (order.orderNumber || order.id).toLowerCase().includes(searchQuery.toLowerCase());
     return matchesFilter && matchesSearch;
   });
 
-  const activeOrderDetails = MOCK_ORDERS.find(o => o.id === selectedOrder);
+  const activeOrderDetails = orders.find(o => o.id === selectedOrder);
 
   const getStepStatus = (step: string, currentStatus: string) => {
     const currentIndex = ORDER_STATUS_STEPS.indexOf(currentStatus);
@@ -76,37 +106,45 @@ export default function CustomerDashboard() {
           <div className="lg:col-span-1 space-y-4">
             <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white dark:bg-slate-900">
               <CardContent className="p-6">
-                <div className="flex flex-col items-center text-center mb-8">
-                  <div className="relative mb-4">
-                    <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold border-4 border-white shadow-sm overflow-hidden">
-                      <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200" alt="Profile" className="w-full h-full object-cover" />
+                  <div className="flex flex-col items-center text-center mb-8">
+                    <div className="relative mb-4">
+                      <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center text-primary text-3xl font-bold border-4 border-white shadow-sm overflow-hidden">
+                        <img src={user?.avatar || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200"} alt="Profile" className="w-full h-full object-cover" />
+                      </div>
+                      <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                        <Camera className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
-                      <Camera className="w-4 h-4" />
-                    </button>
+                    <h3 className="font-bold text-xl text-foreground">{user?.name || "User"}</h3>
+                    <p className="text-sm text-muted-foreground">{user?.email}</p>
                   </div>
-                  <h3 className="font-bold text-xl text-foreground">Sarah M.</h3>
-                  <p className="text-sm text-muted-foreground">sarah.m@example.com</p>
-                </div>
 
                 <div className="space-y-2">
                   <Button 
                     variant={activeTab === "orders" ? "default" : "ghost"} 
                     className={`w-full justify-start h-12 rounded-xl font-semibold ${activeTab === "orders" ? "bg-primary text-white shadow-md shadow-primary/20" : ""}`}
-                    onClick={() => setActiveTab("orders")}
+                    onClick={() => handleTabChange("orders")}
                   >
                     <Package className="w-5 h-5 mr-3" /> My Orders
                   </Button>
                   <Button 
                     variant={activeTab === "profile" ? "default" : "ghost"} 
                     className={`w-full justify-start h-12 rounded-xl font-semibold ${activeTab === "profile" ? "bg-primary text-white shadow-md shadow-primary/20" : ""}`}
-                    onClick={() => setActiveTab("profile")}
+                    onClick={() => handleTabChange("profile")}
                   >
                     <User className="w-5 h-5 mr-3" /> Profile Details
                   </Button>
                   <Button 
-                    variant="ghost" 
-                    className="w-full justify-start h-12 rounded-xl font-semibold text-muted-foreground"
+                    variant={activeTab === "wishlist" ? "default" : "ghost"} 
+                    className={`w-full justify-start h-12 rounded-xl font-semibold ${activeTab === "wishlist" ? "bg-primary text-white shadow-md shadow-primary/20" : ""}`}
+                    onClick={() => handleTabChange("wishlist")}
+                  >
+                    <Heart className="w-5 h-5 mr-3" /> Wishlist
+                  </Button>
+                  <Button 
+                    variant={activeTab === "addresses" ? "default" : "ghost"} 
+                    className={`w-full justify-start h-12 rounded-xl font-semibold ${activeTab === "addresses" ? "bg-primary text-white shadow-md shadow-primary/20" : ""}`}
+                    onClick={() => handleTabChange("addresses")}
                   >
                     <MapPin className="w-5 h-5 mr-3" /> Saved Addresses
                   </Button>
@@ -197,7 +235,7 @@ export default function CustomerDashboard() {
                     {/* Order Tracker Details */}
                     <div className="lg:col-span-3">
                       {activeOrderDetails ? (
-                        <Card className="border-none shadow-xl rounded-[2rem] overflow-hidden sticky top-32">
+                        <Card className="border-none shadow-xl rounded-2xl overflow-hidden sticky top-32">
                           <CardHeader className="bg-slate-50 dark:bg-slate-800 border-b border-border/50 pb-6">
                             <div className="flex justify-between items-center mb-2">
                               <CardTitle className="text-xl">Order Details</CardTitle>
@@ -247,20 +285,20 @@ export default function CustomerDashboard() {
                             {/* Item List */}
                             <div className="space-y-4">
                               <p className="text-sm font-bold text-foreground">Items</p>
-                              {activeOrderDetails.items.map((item, idx) => (
+                              {activeOrderDetails?.items?.map((item: any, idx: number) => (
                                 <div key={idx} className="flex justify-between items-center bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl">
                                   <div>
                                     <p className="font-semibold text-sm text-foreground">{item.name}</p>
                                     <p className="text-xs text-muted-foreground">Qty: {item.qty}</p>
                                   </div>
-                                  <p className="font-bold text-primary">${item.price.toFixed(2)}</p>
+                                  <p className="font-bold text-primary">${item.price?.toFixed(2)}</p>
                                 </div>
                               ))}
                             </div>
 
                             <div className="mt-8 pt-6 border-t border-border/50 flex justify-between items-center">
                               <p className="font-bold text-muted-foreground">Total Amount</p>
-                              <p className="text-2xl font-extrabold text-foreground">${activeOrderDetails.total.toFixed(2)}</p>
+                              <p className="text-2xl font-extrabold text-foreground">${activeOrderDetails?.total?.toFixed(2)}</p>
                             </div>
                           </CardContent>
                         </Card>
@@ -292,24 +330,24 @@ export default function CustomerDashboard() {
                         <div className="space-y-2">
                           <p className="text-sm font-bold text-foreground">Full Name</p>
                           <div className="relative">
-                            <Input defaultValue="Sarah M." className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium pr-10" />
+                            <Input value={user?.name || ""} onChange={(e) => setUser({...user, name: e.target.value})} className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium pr-10" />
                             <Edit2 className="w-4 h-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer hover:text-primary" />
                           </div>
                         </div>
                         <div className="space-y-2">
                           <p className="text-sm font-bold text-foreground">Email Address</p>
-                          <Input defaultValue="sarah.m@example.com" type="email" disabled className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium opacity-70" />
+                          <Input value={user?.email || ""} type="email" disabled className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium opacity-70" />
                         </div>
                         <div className="space-y-2">
                           <p className="text-sm font-bold text-foreground">Phone Number</p>
                           <div className="relative">
-                            <Input defaultValue="+1 234 567 8900" className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium pr-10" />
+                            <Input value={user?.phone || ""} onChange={(e) => setUser({...user, phone: e.target.value})} className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium pr-10" />
                             <Edit2 className="w-4 h-4 text-muted-foreground absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer hover:text-primary" />
                           </div>
                         </div>
                         <div className="space-y-2">
-                          <p className="text-sm font-bold text-foreground">Date of Birth</p>
-                          <Input type="date" defaultValue="1995-08-15" className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium" />
+                          <p className="text-sm font-bold text-foreground">Registration Date</p>
+                          <Input type="text" value={user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : ""} disabled className="h-12 rounded-xl bg-slate-100 dark:bg-slate-800 border-none font-medium opacity-70" />
                         </div>
                       </div>
 
@@ -320,6 +358,111 @@ export default function CustomerDashboard() {
                       </div>
                     </CardContent>
                   </Card>
+                </motion.div>
+              )}
+
+              {activeTab === "wishlist" && (
+                <motion.div 
+                  key="wishlist"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold">My Wishlist ({wishlist.length})</h2>
+                    <Button variant="outline" className="rounded-xl font-bold" disabled={wishlist.length === 0}>Add All to Cart</Button>
+                  </div>
+                  
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {wishlist.length > 0 ? wishlist.map(item => (
+                      <Card key={item.id} className="border-none shadow-sm rounded-3xl overflow-hidden bg-white dark:bg-slate-900 group">
+                        <CardContent className="p-4 flex gap-4">
+                          <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-2xl overflow-hidden shrink-0">
+                            <img src={item.images?.[0] || item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                          </div>
+                          <div className="flex flex-col justify-between py-1 flex-1">
+                            <div>
+                              <p className="text-[10px] font-bold text-primary uppercase tracking-widest mb-1">{item.category?.name || item.category}</p>
+                              <h3 className="font-bold text-sm text-foreground line-clamp-1">{item.name}</h3>
+                              <p className="font-extrabold text-lg mt-1">${(item.basePrice || item.price || 0).toFixed(2)}</p>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" className="h-8 rounded-lg text-[10px] font-bold flex-1">Add to Cart</Button>
+                              <Button size="sm" variant="ghost" className="h-8 w-8 rounded-lg p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )) : (
+                      <div className="col-span-2 text-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200 dark:border-slate-800">
+                        <Heart className="w-12 h-12 mx-auto text-muted-foreground/30 mb-4" />
+                        <p className="text-muted-foreground font-medium">Your wishlist is empty. Start exploring!</p>
+                        <Button className="mt-6 rounded-xl font-bold" onClick={() => router.push("/shop")}>Go to Shop</Button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {activeTab === "addresses" && (
+                <motion.div 
+                  key="addresses"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  <div className="flex justify-between items-center bg-white dark:bg-slate-900 p-6 rounded-3xl shadow-sm">
+                    <h2 className="text-2xl font-bold">Saved Addresses</h2>
+                    <Button className="rounded-xl font-bold gap-2">
+                      <Plus className="w-4 h-4" /> Add New Address
+                    </Button>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-6">
+                    {loading ? (
+                      Array(2).fill(0).map((_, i) => (
+                        <div key={i} className="h-32 bg-white dark:bg-slate-900 rounded-3xl animate-pulse" />
+                      ))
+                    ) : addresses.length === 0 ? (
+                      <div className="col-span-2 text-center py-10 bg-white dark:bg-slate-900 rounded-3xl text-muted-foreground">
+                        No addresses saved.
+                      </div>
+                    ) : addresses.map((addr: any) => (
+                      <Card key={addr.id} className={`border-2 shadow-sm rounded-3xl overflow-hidden bg-white dark:bg-slate-900 ${addr.isDefault ? "border-primary" : "border-transparent"}`}>
+                        <CardContent className="p-6">
+                          <div className="flex justify-between items-start mb-4">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${addr.isDefault ? "bg-primary text-white" : "bg-slate-100 dark:bg-slate-800 text-muted-foreground"}`}>
+                                <MapPin className="w-5 h-5" />
+                              </div>
+                              <div>
+                                <h3 className="font-bold">{addr.type}</h3>
+                                {addr.isDefault && <Badge variant="secondary" className="text-[9px] font-bold uppercase bg-primary/10 text-primary border-none">Default</Badge>}
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-primary">
+                                <Edit2 className="w-4 h-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive">
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-1 text-sm text-muted-foreground font-medium">
+                            <p>{addr.address}</p>
+                            <p>{addr.city}, {addr.zip}</p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>

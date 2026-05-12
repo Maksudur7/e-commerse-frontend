@@ -20,23 +20,15 @@ export default function Home() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch featured products for the "Offers" and potentially the Hero
-        const featured = await apiFetch("/products?isFeatured=true&limit=4");
-        if (featured.success) setFeaturedProducts(featured.products);
+        // Fetch featured products
+        const featuredJson = await apiFetch("/products?isFeatured=true&limit=4");
+        if (featuredJson.success) setFeaturedProducts(featuredJson.products || []);
 
         // Fetch latest products
-        const latest = await apiFetch("/products?limit=8");
-        if (latest.success) setLatestProducts(latest.products);
+        const latestJson = await apiFetch("/products?limit=8");
+        if (latestJson.success) setLatestProducts(latestJson.products || []);
       } catch (error) {
-        console.log("Failed to fetch dynamic content, using fallback data.");
-        const fallback = [
-          { id: "1", name: "Premium Leather Sneakers", basePrice: 120, images: ["https://images.unsplash.com/photo-1595950653106-6c9ebd614c3a?auto=format&fit=crop&q=80&w=600"], category: { name: "Footwear" } },
-          { id: "2", name: "Wireless Earbuds Pro", basePrice: 89, images: ["https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&q=80&w=600"], category: { name: "Electronics" } },
-          { id: "3", name: "Minimalist Watch", basePrice: 199, images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600"], category: { name: "Accessories" } },
-          { id: "4", name: "Cotton Crewneck T-Shirt", basePrice: 35, images: ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600"], category: { name: "Apparel" } },
-        ];
-        setLatestProducts(fallback);
-        setFeaturedProducts(fallback);
+        console.error("Failed to fetch dynamic content:", error);
       } finally {
         setLoading(false);
       }
@@ -148,7 +140,7 @@ export default function Home() {
               Limited Sale
             </Badge>
             <h2 className="text-4xl md:text-5xl font-heading font-black mb-8 text-white">
-              {featuredProducts[0]?.name || "Mid-Season"} <span className="text-[#8ACBD0]">40% OFF</span>
+              {featuredProducts?.[0]?.name || "Mid-Season"} <span className="text-[#8ACBD0]">40% OFF</span>
             </h2>
             
             <div className="flex justify-center gap-4 mb-10">
@@ -167,7 +159,7 @@ export default function Home() {
             </div>
 
             <Link 
-              href={featuredProducts[0] ? `/product/${featuredProducts[0].slug}` : "/shop"}
+              href={featuredProducts?.[0] ? `/product/${featuredProducts[0].slug}` : "/shop"}
               className="inline-flex items-center justify-center bg-white hover:bg-slate-100 text-[#170C79] h-14 px-10 text-base font-black rounded-full shadow-xl transition-all"
             >
               Shop Now <ArrowRight className="w-5 h-5 ml-2" />

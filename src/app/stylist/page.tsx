@@ -7,23 +7,49 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { apiFetch } from "@/lib/api";
+
 export default function Stylist() {
   const [step, setStep] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [resultsReady, setResultsReady] = useState(false);
+  const [recommendations, setRecommendations] = useState<any[]>([]);
+
+  const [selectedPref, setSelectedPref] = useState("");
+  const [selectedColor, setSelectedColor] = useState("");
 
   const preferences = ["Casual Minimalist", "Streetwear", "Office Professional", "Athleisure"];
   const colors = ["Dark Tones", "Earth Tones", "Bright & Bold", "Pastels"];
 
   const handleStart = () => setStep(1);
-  const handleSelect = () => {
-    if (step === 1) setStep(2);
-    else if (step === 2) {
-      setIsAnalyzing(true);
-      setTimeout(() => {
-        setIsAnalyzing(false);
-        setResultsReady(true);
-      }, 3000);
+  
+  const handleSelectPref = (pref: string) => {
+    setSelectedPref(pref);
+    setStep(2);
+  };
+
+  const handleSelectColor = async (color: string) => {
+    setSelectedColor(color);
+    setIsAnalyzing(true);
+    
+    try {
+      // Call AI backend
+      const res = await apiFetch("/ai/stylist", {
+        method: "POST",
+        body: JSON.stringify({ 
+          productName: selectedPref, 
+          category: color 
+        })
+      });
+      
+      if (res.success) {
+        setRecommendations(res.data || []);
+      }
+    } catch (error) {
+      console.error("AI Stylist error:", error);
+    } finally {
+      setIsAnalyzing(false);
+      setResultsReady(true);
     }
   };
 
@@ -55,7 +81,7 @@ export default function Stylist() {
               <h2 className="text-3xl font-extrabold mb-8">What's your daily go-to style?</h2>
               <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 {preferences.map((pref) => (
-                  <Card key={pref} onClick={handleSelect} className="cursor-pointer hover:border-primary hover:shadow-lg transition-all rounded-3xl border-2">
+                  <Card key={pref} onClick={() => handleSelectPref(pref)} className="cursor-pointer hover:border-primary hover:shadow-lg transition-all rounded-3xl border-2">
                     <CardContent className="p-8 flex flex-col items-center">
                       <Shirt className="w-12 h-12 text-muted-foreground mb-4" />
                       <h3 className="font-bold text-lg">{pref}</h3>
@@ -71,7 +97,7 @@ export default function Stylist() {
               <h2 className="text-3xl font-extrabold mb-8">Which color palette do you prefer?</h2>
               <div className="grid sm:grid-cols-2 gap-4 max-w-2xl mx-auto">
                 {colors.map((color) => (
-                  <Card key={color} onClick={handleSelect} className="cursor-pointer hover:border-primary hover:shadow-lg transition-all rounded-3xl border-2">
+                  <Card key={color} onClick={() => handleSelectColor(color)} className="cursor-pointer hover:border-primary hover:shadow-lg transition-all rounded-3xl border-2">
                     <CardContent className="p-8 flex flex-col items-center">
                       <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-slate-200 to-slate-400 mb-4 shadow-inner" />
                       <h3 className="font-bold text-lg">{color}</h3>
@@ -92,7 +118,7 @@ export default function Stylist() {
                 </div>
               </div>
               <h2 className="text-3xl font-extrabold mb-4">Curating your look...</h2>
-              <p className="text-muted-foreground">Our system is matching your preferences with thousands of products.</p>
+              <p className="text-muted-foreground">Our AI is matching your preferences with our premium collection.</p>
             </motion.div>
           )}
 
@@ -103,29 +129,29 @@ export default function Stylist() {
                   <CheckIcon className="w-4 h-4" /> Match Found
                 </div>
                 <h2 className="text-4xl font-extrabold mb-4">Your Curated Wardrobe</h2>
-                <p className="text-muted-foreground text-lg">Based on "Casual Minimalist" and "Earth Tones"</p>
+                <p className="text-muted-foreground text-lg">Based on "{selectedPref}" and "{selectedColor}"</p>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8">
-                {[
-                  { name: "Beige Trench Coat", price: 150, image: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=600" },
-                  { name: "Cream Knit Sweater", price: 85, image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?auto=format&fit=crop&q=80&w=600" },
-                  { name: "Khaki Chinos", price: 65, image: "https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?auto=format&fit=crop&q=80&w=600" },
-                ].map((item, i) => (
+                {recommendations.length > 0 ? recommendations.map((item, i) => (
                   <Card key={i} className="border-none shadow-xl rounded-[2rem] overflow-hidden group">
                     <div className="relative h-80 overflow-hidden">
-                      <img src={item.image} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                      <img src={item.image || "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?auto=format&fit=crop&q=80&w=600"} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                       <div className="absolute top-4 right-4 w-10 h-10 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center font-bold text-primary shadow-lg">
                         #{i+1}
                       </div>
                     </div>
                     <CardContent className="p-6">
-                      <h3 className="font-bold text-lg">{item.name}</h3>
-                      <p className="font-extrabold text-primary">${item.price}</p>
-                      <Button className="w-full mt-4 rounded-xl font-bold">Add to Cart</Button>
+                      <h3 className="font-bold text-lg line-clamp-1">{item.name}</h3>
+                      <p className="font-extrabold text-primary">${item.price || "Contact for Price"}</p>
+                      <Button className="w-full mt-4 rounded-xl font-bold">View Product</Button>
                     </CardContent>
                   </Card>
-                ))}
+                )) : (
+                  <div className="col-span-3 text-center py-12">
+                    <p className="text-muted-foreground italic">We couldn't find exact matches for your criteria, but our stylists are on it!</p>
+                  </div>
+                )}
               </div>
               <div className="mt-12 text-center">
                 <Button variant="outline" className="h-14 px-10 rounded-full font-bold shadow-sm" onClick={() => {setStep(1); setResultsReady(false);}}>

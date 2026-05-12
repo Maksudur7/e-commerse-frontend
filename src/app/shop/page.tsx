@@ -7,6 +7,7 @@ import { ProductCard } from "@/components/home/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SlidersHorizontal, Search, ChevronDown, Check } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 function ShopContent() {
   const searchParams = useSearchParams();
@@ -21,30 +22,25 @@ function ShopContent() {
     if (cat) setSelectedCategory(cat);
   }, [searchParams]);
 
+  const [categories, setCategories] = useState<any[]>([]);
+
   useEffect(() => {
-    const fetchProducts = async () => {
+    const fetchInitialData = async () => {
       try {
-        const res = await fetch("http://localhost:5000/api/products");
-        const json = await res.json();
-        if (json.success && json.data) {
-          setProducts(json.data);
-        }
+        // Fetch Categories
+        const catJson = await apiFetch("/categories");
+        if (catJson.success) setCategories(catJson.data);
+
+        // Fetch Products
+        const prodJson = await apiFetch("/products");
+        if (prodJson.success) setProducts(prodJson.products || []);
       } catch (error) {
-        console.log("Failed to fetch products (using fallback data)");
-        // Fallback mock data if API fails
-        setProducts([
-          { id: "1", name: "Premium Leather Sneakers", basePrice: 120, images: ["https://images.unsplash.com/photo-1595950653106-6c9ebd614c3a?auto=format&fit=crop&q=80&w=600"], category: { name: "Footwear" } },
-          { id: "2", name: "Wireless Earbuds Pro", basePrice: 89, images: ["https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&q=80&w=600"], category: { name: "Electronics" } },
-          { id: "3", name: "Minimalist Watch", basePrice: 199, images: ["https://images.unsplash.com/photo-1523275335684-37898b6baf30?auto=format&fit=crop&q=80&w=600"], category: { name: "Accessories" } },
-          { id: "4", name: "Cotton Crewneck T-Shirt", basePrice: 35, images: ["https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?auto=format&fit=crop&q=80&w=600"], category: { name: "Apparel" } },
-          { id: "5", name: "Classic Denim Jacket", basePrice: 85, images: ["https://images.unsplash.com/photo-1576995853123-5a10305d93c0?auto=format&fit=crop&q=80&w=600"], category: { name: "Apparel" } },
-          { id: "6", name: "Sports Smartwatch", basePrice: 250, images: ["https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&q=80&w=600"], category: { name: "Electronics" } },
-        ]);
+        console.error("Failed to fetch shop data:", error);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    fetchInitialData();
   }, []);
 
   const displayedProducts = selectedCategory === "All Products"
@@ -80,7 +76,7 @@ function ShopContent() {
               <div className="mb-8">
                 <h3 className="font-bold mb-4 text-foreground">Categories</h3>
                 <div className="space-y-3 text-sm font-medium text-muted-foreground">
-                  {["All Products", "Electronics", "Apparel", "Home & Living", "Accessories"].map((cat) => (
+                  {["All Products", ...categories.map(c => c.name)].map((cat) => (
                     <label key={cat} className="flex items-center gap-3 cursor-pointer group" onClick={() => setSelectedCategory(cat)}>
                       <div className={`w-5 h-5 rounded border flex items-center justify-center ${selectedCategory === cat ? "bg-primary border-primary text-white" : "border-slate-300 dark:border-slate-700 group-hover:border-primary"}`}>
                         {selectedCategory === cat && <Check className="w-3.5 h-3.5" />}

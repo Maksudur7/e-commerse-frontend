@@ -14,10 +14,21 @@ export const apiFetch = async (endpoint: string, options: RequestInit = {}) => {
     headers,
   });
 
-  const data = await response.json();
+  const contentType = response.headers.get("content-type");
+  let data;
+  
+  if (contentType && contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    if (!response.ok) {
+      throw new Error(`Server Error: ${response.status} ${response.statusText}`);
+    }
+    return text;
+  }
 
   if (!response.ok) {
-    throw new Error(data.message || 'Something went wrong');
+    throw new Error(data?.message || `Error ${response.status}: ${response.statusText}`);
   }
 
   return data;

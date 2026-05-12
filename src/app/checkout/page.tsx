@@ -12,6 +12,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 
 const checkoutSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -48,13 +49,39 @@ export default function CheckoutPage() {
     
     setIsProcessing(true);
     
-    // Simulate API Call for Checkout
-    setTimeout(() => {
+    try {
+      const orderData = {
+        items: items.map(item => ({
+          variantId: item.variantId,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        totalAmount: grandTotal,
+        paymentMethod: paymentMethod,
+        shippingAddress: {
+          fullName: data.fullName,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          postalCode: data.postalCode
+        }
+      };
+
+      const res = await apiFetch("/cart-orders/orders", {
+        method: "POST",
+        body: JSON.stringify(orderData)
+      });
+
+      if (res.status === 'success' || res.success) {
+        setOrderId(res.data?.id || res.data?.orderNumber || "ORDER-SUCCESS");
+        setIsSuccess(true);
+        clearCart();
+      }
+    } catch (error: any) {
+      alert(error.message || "Checkout failed. Please try again.");
+    } finally {
       setIsProcessing(false);
-      setIsSuccess(true);
-      setOrderId(`ORD-${Math.random().toString(36).substring(2, 9).toUpperCase()}`);
-      clearCart();
-    }, 2000);
+    }
   };
 
   if (isSuccess) {

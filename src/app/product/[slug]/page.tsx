@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Star, ShoppingCart, Heart, ShieldCheck, Truck, RotateCcw } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useCartStore } from "@/store/useCartStore";
+import { apiFetch } from "@/lib/api";
 
 export default function ProductDetail() {
   const { slug } = useParams();
@@ -18,12 +19,26 @@ export default function ProductDetail() {
   const [zoomStyle, setZoomStyle] = useState({});
   const addItem = useCartStore((state) => state.addItem);
   const imgContainerRef = useRef<HTMLDivElement>(null);
+  const [relatedProducts, setRelatedProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (product?.categoryId) {
+      const fetchRelated = async () => {
+        try {
+          const json = await apiFetch(`/products?category=${product.categoryId}&limit=4`);
+          if (json.success) setRelatedProducts(json.data.filter((p: any) => p.id !== product.id));
+        } catch (error) {
+          console.error("Failed to fetch related products:", error);
+        }
+      };
+      fetchRelated();
+    }
+  }, [product]);
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/products/${slug}`);
-        const json = await res.json();
+        const json = await apiFetch(`/products/${slug}`);
         if (json.success && json.data) {
           setProduct(json.data);
           
@@ -125,6 +140,36 @@ export default function ProductDetail() {
       <Navbar />
       
       <div className="container mx-auto px-4 pt-32">
+        {/* JSON-LD Structured Data for SEO */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org/",
+              "@type": "Product",
+              "name": product.name,
+              "image": images,
+              "description": product.description,
+              "brand": {
+                "@type": "Brand",
+                "name": "ShopEase"
+              },
+              "offers": {
+                "@type": "Offer",
+                "url": `https://shopease.ai/product/${slug}`,
+                "priceCurrency": "USD",
+                "price": product.basePrice,
+                "availability": inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock"
+              },
+              "aggregateRating": {
+                "@type": "AggregateRating",
+                "ratingValue": rating,
+                "reviewCount": reviewsCount
+              }
+            })
+          }}
+        />
+        
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16">
           {/* Media Gallery */}
           <div className="space-y-6">
@@ -262,6 +307,38 @@ export default function ProductDetail() {
                 <p className="text-xs font-bold text-foreground uppercase tracking-wide">2 Year Warranty</p>
               </div>
             </div>
+          </div>
+        </div>
+
+        </div>
+
+        {/* Related Products */}
+        <div className="mt-32">
+          <div className="flex items-center justify-between mb-12">
+            <h2 className="text-3xl font-heading font-black text-foreground">
+              You May Also <span className="text-[#56B6C6]">Like</span>
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {relatedProducts.length > 0 ? relatedProducts.map((p) => (
+              <div key={p.id} className="group cursor-pointer" onClick={() => window.location.href = `/product/${p.slug}`}>
+                <div className="aspect-[4/5] rounded-[2rem] overflow-hidden bg-slate-100 mb-4 relative">
+                  <img 
+                    src={p.images[0] || "https://images.unsplash.com/photo-1595950653106-6c9ebd614c3a?auto=format&fit=crop&q=80&w=600"} 
+                    alt={p.name} 
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  />
+                  <div className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 backdrop-blur-md flex items-center justify-center text-muted-foreground group-hover:text-primary transition-colors">
+                    <Heart className="w-5 h-5" />
+                  </div>
+                </div>
+                <p className="text-[10px] font-black text-primary uppercase tracking-widest mb-1">{p.category?.name || "Accessories"}</p>
+                <h3 className="font-bold text-lg mb-2">{p.name}</h3>
+                <p className="font-black text-xl text-foreground">${p.basePrice?.toFixed(2)}</p>
+              </div>
+            )) : (
+              <p className="text-muted-foreground col-span-full">No related products found.</p>
+            )}
           </div>
         </div>
       </div>

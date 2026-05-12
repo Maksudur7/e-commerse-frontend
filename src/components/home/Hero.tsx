@@ -45,7 +45,7 @@ export function Hero() {
             title: p.name,
             subtitle: p.category?.name || "Featured Item",
             description: p.description,
-            image: p.images[0] || fallbackSlides[0].image,
+            image: p.images?.[0] || fallbackSlides[0].image,
             color: "#170C79",
             slug: p.slug
           }));
