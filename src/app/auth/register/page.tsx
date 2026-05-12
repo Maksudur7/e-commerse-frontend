@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { ArrowRight, UserPlus, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/api";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
@@ -30,25 +31,20 @@ export default function RegisterPage() {
     }
     setIsLoading(true);
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
+      const data = await apiFetch("/auth/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
           password: formData.password
         }),
       });
-      const data = await res.json();
-      if (res.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        window.location.href = "/dashboard";
-      } else {
-        alert(data.message || "Registration failed");
-      }
-    } catch (error) {
-      alert("Something went wrong. Please try again.");
+      
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      window.location.href = "/dashboard";
+    } catch (error: any) {
+      alert(error.message || "Registration failed");
     } finally {
       setIsLoading(false);
     }

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ArrowRight, CreditCard, ShieldCheck, Truck, CheckCircle2, Loader2, ShoppingCart, Trash2 } from "lucide-react";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +29,7 @@ const checkoutSchema = z.object({
 type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { items, total, clearCart, removeItem } = useCartStore();
 
   const subtotal = total();
@@ -42,10 +44,11 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  if (!isMounted) return null;
-
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/auth/login?redirect=/checkout");
+    }
+  }, [router]);
 
   const {
     register,
@@ -55,8 +58,21 @@ export default function CheckoutPage() {
     resolver: zodResolver(checkoutSchema),
   });
 
+  // Log validation errors for debugging
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      console.log("Validation errors:", errors);
+    }
+  }, [errors]);
+
+  if (!isMounted) return null;
+
   const onSubmit = async (data: CheckoutFormValues) => {
-    if (items.length === 0) return;
+    console.log("Submitting order...", data);
+    if (items.length === 0) {
+      alert("Your cart is empty!");
+      return;
+    }
     
     setIsProcessing(true);
     
@@ -78,17 +94,29 @@ export default function CheckoutPage() {
         }
       };
 
+      console.log("Order payload:", orderData);
+
       const res = await apiFetch("/cart-orders/orders", {
         method: "POST",
         body: JSON.stringify(orderData)
       });
 
-      if (res.status === 'success' || res.success) {
+      console.log("Order response:", res);
+
+      // Check if success is explicitly true or if we got an order ID
+      const isActuallySuccess = res && (res.success === true || (res.data && res.data.id));
+
+      if (isActuallySuccess) {
         setOrderId(res.data?.id || res.data?.orderNumber || "ORDER-SUCCESS");
         setIsSuccess(true);
         clearCart();
+      } else {
+        console.error("Order placement unsuccessful. Full response:", res);
+        const errorMsg = res?.message || "The server did not return a success flag. Raw response: " + JSON.stringify(res);
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
+      console.error("Checkout error:", error);
       alert(error.message || "Checkout failed. Please try again.");
     } finally {
       setIsProcessing(false);

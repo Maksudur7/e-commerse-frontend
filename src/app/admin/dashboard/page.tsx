@@ -137,14 +137,15 @@ export default function AdminDashboard() {
       const userData = localStorage.getItem("user");
       if (!userData) {
         router.push("/auth/login");
-        return;
+        return false;
       }
       const parsedUser = JSON.parse(userData);
       if (parsedUser.role !== "ADMIN") {
-        router.push("/dashboard"); // Redirect customers to their dashboard
-        return;
+        router.push("/dashboard"); 
+        return false;
       }
       setUser(parsedUser);
+      return true;
     };
 
     const fetchNotifications = async () => {
@@ -173,14 +174,14 @@ export default function AdminDashboard() {
       }
     };
 
-    checkAuth();
-
-    fetchStats();
-    fetchNotifications();
-    
-    // Poll for notifications every 30 seconds
-    const interval = setInterval(fetchNotifications, 30000);
-    return () => clearInterval(interval);
+    if (checkAuth()) {
+      fetchStats();
+      fetchNotifications();
+      
+      // Poll for notifications every 30 seconds
+      const interval = setInterval(fetchNotifications, 30000);
+      return () => clearInterval(interval);
+    }
   }, [router]);
 
 
@@ -303,6 +304,60 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("File size should be less than 5MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64String = reader.result as string;
+      try {
+        const res = await apiFetch("/users/profile", {
+          method: "PUT",
+          body: JSON.stringify({ avatar: base64String })
+        });
+
+        if (res.success) {
+          const updatedUser = { ...user, avatar: base64String };
+          setUser(updatedUser);
+          localStorage.setItem("user", JSON.stringify(updatedUser));
+          alert("Profile picture updated successfully!");
+        }
+      } catch (error: any) {
+        console.error("Avatar upload error:", error);
+        alert("Failed to update profile picture: " + (error.message || "Unknown error"));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleUpdateProfile = async () => {
+    try {
+      const name = (document.getElementById("profile-name") as HTMLInputElement).value;
+      const phone = (document.getElementById("profile-phone") as HTMLInputElement).value;
+
+      const res = await apiFetch("/users/profile", {
+        method: "PUT",
+        body: JSON.stringify({ name, phone })
+      });
+
+      if (res.success) {
+        const updatedUser = { ...user, name, phone };
+        setUser(updatedUser);
+        localStorage.setItem("user", JSON.stringify(updatedUser));
+        alert("Profile updated successfully!");
+      }
+    } catch (error: any) {
+      console.error("Profile update error:", error);
+      alert("Failed to update profile: " + (error.message || "Unknown error"));
+    }
+  };
+
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -401,14 +456,18 @@ export default function AdminDashboard() {
           <div className="flex items-center gap-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
-                  <Bell className="w-5 h-5" />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white dark:border-slate-900">
-                      {unreadCount > 9 ? '9+' : unreadCount}
-                    </span>
-                  )}
-                </Button>
+                <div className="relative cursor-pointer">
+                  <Button variant="ghost" size="icon" asChild className="relative h-10 w-10 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <div>
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-red-500 text-[10px] font-bold text-white rounded-full flex items-center justify-center animate-pulse border-2 border-white dark:border-slate-900">
+                          {unreadCount > 9 ? '9+' : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                  </Button>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-80 rounded-2xl p-2 glass-card border-none shadow-2xl mt-2">
                 <div className="flex items-center justify-between p-3 border-b border-border/50">
@@ -463,10 +522,14 @@ export default function AdminDashboard() {
 
             
             <DropdownMenu>
-              <DropdownMenuTrigger className="outline-none">
-                <div className="flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded-full transition-colors">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold">
-                    {user?.name?.charAt(0) || "A"}
+              <DropdownMenuTrigger className="outline-none" asChild>
+                <div className="flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800 p-1 rounded-full transition-colors cursor-pointer">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 text-primary flex items-center justify-center font-bold overflow-hidden">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      user?.name?.charAt(0) || "A"
+                    )}
                   </div>
                   <div className="text-right hidden sm:block">
                     <p className="text-sm font-bold">{user?.name || "Admin User"}</p>
@@ -1251,9 +1314,23 @@ export default function AdminDashboard() {
                     <CardContent className="p-8 text-center">
                       <div className="relative inline-block mb-6">
                         <div className="w-32 h-32 rounded-full bg-primary/10 flex items-center justify-center text-primary text-4xl font-bold border-4 border-white dark:border-slate-800 shadow-xl overflow-hidden">
-                          {user?.name?.charAt(0) || "A"}
+                          {user?.avatar ? (
+                            <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            user?.name?.charAt(0) || "A"
+                          )}
                         </div>
-                        <button className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform">
+                        <input 
+                          type="file" 
+                          id="avatar-upload" 
+                          className="hidden" 
+                          accept="image/*" 
+                          onChange={handleAvatarUpload}
+                        />
+                        <button 
+                          onClick={() => document.getElementById("avatar-upload")?.click()}
+                          className="absolute bottom-0 right-0 w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
+                        >
                           <Edit className="w-5 h-5" />
                         </button>
                       </div>
@@ -1282,7 +1359,11 @@ export default function AdminDashboard() {
                       <div className="grid sm:grid-cols-2 gap-8">
                         <div className="space-y-2">
                           <p className="text-sm font-bold text-foreground">Display Name</p>
-                          <Input defaultValue={user?.name} className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium" />
+                          <Input id="profile-name" defaultValue={user?.name} className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium" />
+                        </div>
+                        <div className="space-y-2">
+                          <p className="text-sm font-bold text-foreground">Phone Number</p>
+                          <Input id="profile-phone" defaultValue={user?.phone || ""} className="h-12 rounded-xl bg-slate-50 dark:bg-slate-800 border-none font-medium" />
                         </div>
                         <div className="space-y-2">
                           <p className="text-sm font-bold text-foreground">Email Address</p>
@@ -1303,8 +1384,13 @@ export default function AdminDashboard() {
                       </div>
 
                       <div className="pt-8 border-t border-border flex justify-end gap-4">
-                        <Button variant="outline" className="h-12 px-8 rounded-xl font-bold">Discard</Button>
-                        <Button className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20">Save Changes</Button>
+                        <Button variant="outline" className="h-12 px-8 rounded-xl font-bold" onClick={() => window.location.reload()}>Discard</Button>
+                        <Button 
+                          onClick={handleUpdateProfile}
+                          className="h-12 px-8 rounded-xl font-bold shadow-lg shadow-primary/20"
+                        >
+                          Save Changes
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>

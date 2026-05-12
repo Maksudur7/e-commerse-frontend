@@ -243,8 +243,12 @@ export function Navbar() {
 
           {isLoggedIn ? (
             <DropdownMenu>
-              <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full hover:bg-muted h-10 w-10 hidden sm:flex outline-none">
-                <User className="w-5 h-5" />
+              <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-full hover:bg-muted h-10 w-10 hidden sm:flex outline-none overflow-hidden">
+                {user?.avatar ? (
+                  <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User className="w-5 h-5" />
+                )}
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 glass-card">
                 <div className="px-2 py-1.5 text-sm font-bold font-heading text-primary">{user?.name || "My Account"}</div>
