@@ -18,6 +18,7 @@ export default function WishlistPage() {
     const fetchWishlist = async () => {
       try {
         const res = await apiFetch("/wishlist");
+        // console.log('data from wishlist', res)
         if (res.success) setWishlist(res.data || []);
       } catch (error) {
         console.error("Wishlist fetch error:", error);
@@ -63,13 +64,13 @@ export default function WishlistPage() {
           wishlist.map((item) => (
             <Card key={item.id} className="border-none shadow-lg rounded-3xl bg-white dark:bg-slate-900 overflow-hidden group">
               <div className="relative aspect-square overflow-hidden">
-                <img 
-                  src={item.images?.[0] && item.images[0].startsWith('http') ? item.images[0] : "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"} 
+                <img
+                  src={item.images?.[0] && item.images[0].startsWith('http') ? item.images[0] : "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"}
                   onError={(e) => { (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?auto=format&fit=crop&q=80&w=400"; }}
                   alt={item.name}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
-                <Button 
+                <Button
                   onClick={() => removeFromWishlist(item.id)}
                   variant="destructive" size="icon" className="absolute top-3 right-3 rounded-full h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
                 >
@@ -79,7 +80,7 @@ export default function WishlistPage() {
               <CardContent className="p-5">
                 <h4 className="font-bold text-sm mb-1 truncate">{item.name}</h4>
                 <p className="text-primary font-extrabold mb-4">${item.basePrice.toFixed(2)}</p>
-                <Button 
+                <Button
                   onClick={() => router.push(`/product/${item.slug}`)}
                   className="w-full rounded-xl font-bold h-10 gap-2"
                 >

@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
+  DropdownMenuGroup,
   DropdownMenuItem, 
   DropdownMenuLabel, 
   DropdownMenuSeparator, 
@@ -255,14 +256,16 @@ export default function AdminLayout({
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56 rounded-2xl p-2 glass-card border-none shadow-2xl">
-                <DropdownMenuLabel className="font-heading font-bold">My Account</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="rounded-xl cursor-pointer py-2.5" onClick={() => router.push("/admin/dashboard/profile")}>
-                  <User className="w-4 h-4 mr-2" /> Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem className="rounded-xl cursor-pointer py-2.5" onClick={() => router.push("/admin/dashboard/settings")}>
-                  <Settings className="w-4 h-4 mr-2" /> Settings
-                </DropdownMenuItem>
+                <DropdownMenuGroup>
+                  <DropdownMenuLabel className="font-heading font-bold">My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="rounded-xl cursor-pointer py-2.5" onClick={() => router.push("/admin/dashboard/profile")}>
+                    <User className="w-4 h-4 mr-2" /> Profile
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="rounded-xl cursor-pointer py-2.5" onClick={() => router.push("/admin/dashboard/settings")}>
+                    <Settings className="w-4 h-4 mr-2" /> Settings
+                  </DropdownMenuItem>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive rounded-xl cursor-pointer py-2.5 focus:bg-destructive/10 focus:text-destructive" onClick={handleLogout}>
                   <LogOut className="w-4 h-4 mr-2" /> Logout

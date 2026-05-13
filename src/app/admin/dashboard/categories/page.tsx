@@ -124,10 +124,8 @@ export default function CategoriesPage() {
                 </div>
               </div>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="rounded-xl">
-                    <MoreVertical className="w-4 h-4" />
-                  </Button>
+                <DropdownMenuTrigger className="inline-flex items-center justify-center rounded-xl w-9 h-9 hover:bg-accent transition-colors">
+                  <MoreVertical className="w-4 h-4" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="rounded-xl">
                   <DropdownMenuItem onClick={() => handleDeleteCategory(category.id)} className="text-destructive focus:text-destructive cursor-pointer">
