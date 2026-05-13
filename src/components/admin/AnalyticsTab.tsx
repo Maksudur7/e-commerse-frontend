@@ -11,7 +11,7 @@ export default function AnalyticsTab({ stats }: { stats: any }) {
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-heading font-extrabold text-foreground">Advanced Analytics</h1>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl font-bold">Export Report</Button>
+          <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.alert('Export logic coming soon to this tab!')}>Export Report</Button>
           <Button className="rounded-xl font-bold">Refresh Data</Button>
         </div>
       </div>
@@ -23,8 +23,8 @@ export default function AnalyticsTab({ stats }: { stats: any }) {
               <TrendingUp className="w-5 h-5 text-primary" /> Growth Trajectory
             </CardTitle>
           </CardHeader>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={1}>
               <LineChart data={stats?.salesData || []}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
@@ -42,8 +42,8 @@ export default function AnalyticsTab({ stats }: { stats: any }) {
               <Activity className="w-5 h-5 text-green-500" /> Order Velocity
             </CardTitle>
           </CardHeader>
-          <div className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={1}>
               <AreaChart data={stats?.salesData || []}>
                 <XAxis dataKey="name" hide />
                 <Tooltip />
@@ -81,8 +81,8 @@ export default function AnalyticsTab({ stats }: { stats: any }) {
               <Package className="w-5 h-5 text-primary" /> Category Distribution
             </CardTitle>
           </CardHeader>
-          <div className="h-[250px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%" minHeight={1}>
               <PieChart>
                 <Pie
                   data={stats?.categoryStats || []}
