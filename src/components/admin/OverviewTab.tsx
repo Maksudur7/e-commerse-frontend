@@ -5,9 +5,11 @@ import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import { TrendingUp, ArrowUpRight, ArrowDownRight, BrainCircuit } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function OverviewTab({ stats, onRunAnalysis }: { stats: any; onRunAnalysis?: () => void }) {
-  const handleExportReport = () => {
+  const { error: notifyError } = useNotification();
+  const handleExportReport = async () => {
     try {
       const htmlContent = `
         <!DOCTYPE html>
@@ -91,11 +93,11 @@ export default function OverviewTab({ stats, onRunAnalysis }: { stats: any; onRu
         script.innerHTML = "window.onload = function() { setTimeout(function() { window.print(); }, 500); }";
         newWindow.document.body.appendChild(script);
       } else {
-        alert("Please allow pop-ups to view and download the report.");
+        await notifyError("Please allow pop-ups to view and download the report.");
       }
     } catch (err: any) {
       console.error("Export failed:", err);
-      alert("Failed to export report: " + err.message);
+      await notifyError("Failed to export report: " + err.message);
     }
   };
 

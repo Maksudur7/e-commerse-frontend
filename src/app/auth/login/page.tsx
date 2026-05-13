@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ArrowRight, LogIn, Sparkles, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function LoginPage() {
+  const { error: notifyError } = useNotification();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -32,7 +34,7 @@ export default function LoginPage() {
       localStorage.setItem("user", JSON.stringify(data.user));
       window.location.href = data.user.role === "ADMIN" ? "/admin/dashboard" : "/dashboard";
     } catch (error: any) {
-      alert(error.message || "Something went wrong. Please try again.");
+      await notifyError(error.message || "Something went wrong. Please try again.");
     } finally {
       setIsLoading(false);
     }

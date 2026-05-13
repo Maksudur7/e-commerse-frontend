@@ -22,10 +22,12 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const { error: notifyError, confirm } = useNotification();
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
 
@@ -58,17 +60,18 @@ export default function CategoriesPage() {
         fetchCategories();
       }
     } catch (error: any) {
-      alert("Error adding category: " + error.message);
+      await notifyError("Error adding category: " + error.message);
     }
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!confirm("Are you sure? This will not delete products in this category.")) return;
+    const confirmed = await confirm("Are you sure? This will not delete products in this category.");
+    if (!confirmed) return;
     try {
       const res = await apiFetch(`/admin/categories/${id}`, { method: "DELETE" });
       if (res.success) fetchCategories();
     } catch (error: any) {
-      alert("Error deleting category: " + error.message);
+      await notifyError("Error deleting category: " + error.message);
     }
   };
 

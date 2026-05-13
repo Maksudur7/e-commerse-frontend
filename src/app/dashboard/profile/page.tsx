@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function ProfilePage() {
+  const { success: notifySuccess, error: notifyError } = useNotification();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -33,11 +35,11 @@ export default function ProfilePage() {
         const updatedUser = { ...user, name, phone };
         setUser(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        alert("Profile updated successfully!");
+        await notifySuccess("Profile updated successfully!");
       }
     } catch (error: any) {
       console.error("Profile update error:", error);
-      alert("Failed to update profile: " + (error.message || "Unknown error"));
+      await notifyError("Failed to update profile: " + (error.message || "Unknown error"));
     }
   };
 

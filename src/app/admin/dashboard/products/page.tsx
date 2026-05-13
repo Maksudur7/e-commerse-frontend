@@ -26,12 +26,14 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingProduct, setIsAddingProduct] = useState(false);
+  const { error: notifyError, confirm } = useNotification();
   const [categories, setCategories] = useState<any[]>([]);
   const [newProduct, setNewProduct] = useState({
     name: "",
@@ -95,17 +97,18 @@ export default function ProductsPage() {
         fetchData();
       }
     } catch (error: any) {
-      alert("Error adding product: " + error.message);
+      await notifyError("Error adding product: " + error.message);
     }
   };
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    const confirmed = await confirm("Are you sure you want to delete this product?");
+    if (!confirmed) return;
     try {
       const res = await apiFetch(`/admin/products/${id}`, { method: "DELETE" });
       if (res.success) fetchData();
     } catch (error: any) {
-      alert("Error deleting product: " + error.message);
+      await notifyError("Error deleting product: " + error.message);
     }
   };
 

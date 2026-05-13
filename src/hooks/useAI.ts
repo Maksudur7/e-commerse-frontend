@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 
 export function useAI() {
   const searchMutation = useMutation({
-    mutationFn: (query: string) => 
+    mutationFn: (query: string) =>
       apiFetch('/ai/search', {
         method: 'POST',
         body: JSON.stringify({ query }),
@@ -13,7 +13,7 @@ export function useAI() {
   });
 
   const stylistMutation = useMutation({
-    mutationFn: (data: { productName: string; category: string }) =>
+    mutationFn: (data: { productName: string; category?: string; style?: string; priceRange?: string; productId?: string }) =>
       apiFetch('/ai/stylist', {
         method: 'POST',
         body: JSON.stringify(data),

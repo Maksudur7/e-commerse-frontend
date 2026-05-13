@@ -16,6 +16,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Navbar } from "@/components/layout/Navbar";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function DashboardLayout({
   children,
@@ -39,12 +40,14 @@ export default function DashboardLayout({
     setLoading(false);
   }, [router]);
 
+  const { success: notifySuccess, error: notifyError } = useNotification();
+
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("File size should be less than 5MB");
+      await notifyError("File size should be less than 5MB");
       return;
     }
 
@@ -61,11 +64,11 @@ export default function DashboardLayout({
           const updatedUser = { ...user, avatar: base64String };
           setUser(updatedUser);
           localStorage.setItem("user", JSON.stringify(updatedUser));
-          alert("Profile picture updated successfully!");
+          await notifySuccess("Profile picture updated successfully!");
         }
       } catch (error: any) {
         console.error("Avatar upload error:", error);
-        alert("Failed to update profile picture: " + (error.message || "Unknown error"));
+        await notifyError("Failed to update profile picture: " + (error.message || "Unknown error"));
       }
     };
     reader.readAsDataURL(file);

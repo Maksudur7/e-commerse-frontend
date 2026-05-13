@@ -20,8 +20,10 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function OrdersPage() {
+  const { success: notifySuccess, error: notifyError } = useNotification();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -56,11 +58,11 @@ export default function OrdersPage() {
 
       if (res.success) {
         setOrders(orders.map(o => o.id === orderId ? { ...o, status } : o));
-        alert(`Order status updated to ${status}`);
+        await notifySuccess(`Order status updated to ${status}`);
       }
     } catch (error: any) {
       console.error("Failed to update status:", error);
-      alert("Error updating status: " + error.message);
+      await notifyError("Error updating status: " + error.message);
     }
   };
 

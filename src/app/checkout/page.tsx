@@ -16,6 +16,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 const checkoutSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -31,6 +32,7 @@ type CheckoutFormValues = z.infer<typeof checkoutSchema>;
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, total, clearCart, removeItem } = useCartStore();
+  const { alert: notify, error: notifyError } = useNotification();
 
   const subtotal = total();
   const shipping = items.length > 0 ? 15.0 : 0;
@@ -70,7 +72,7 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormValues) => {
     console.log("Submitting order...", data);
     if (items.length === 0) {
-      alert("Your cart is empty!");
+      await notify("Your cart is empty!");
       return;
     }
     
@@ -117,7 +119,7 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       console.error("Checkout error:", error);
-      alert(error.message || "Checkout failed. Please try again.");
+      await notifyError(error.message || "Checkout failed. Please try again.");
     } finally {
       setIsProcessing(false);
     }

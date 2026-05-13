@@ -4,14 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { motion } from "framer-motion";
 import { TrendingUp, Activity, Zap, ShoppingCart, Package } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell } from "recharts";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function AnalyticsTab({ stats }: { stats: any }) {
+  const { alert: notify } = useNotification();
   return (
     <motion.div key="analytics" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-heading font-extrabold text-foreground">Advanced Analytics</h1>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl font-bold" onClick={() => window.alert('Export logic coming soon to this tab!')}>Export Report</Button>
+          <Button variant="outline" className="rounded-xl font-bold" onClick={() => void notify('Export logic coming soon to this tab!')}>Export Report</Button>
           <Button className="rounded-xl font-bold">Refresh Data</Button>
         </div>
       </div>

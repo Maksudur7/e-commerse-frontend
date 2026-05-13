@@ -8,8 +8,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { ArrowRight, UserPlus, ShieldCheck } from "lucide-react";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
+import { useNotification } from "@/hooks/useNotification";
 
 export default function RegisterPage() {
+  const { alert: notify, error: notifyError } = useNotification();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -26,7 +28,7 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.password !== formData.confirmPassword) {
-      alert("Passwords do not match");
+      await notify("Passwords do not match");
       return;
     }
     setIsLoading(true);
@@ -44,7 +46,7 @@ export default function RegisterPage() {
       localStorage.setItem("user", JSON.stringify(data.user));
       window.location.href = "/dashboard";
     } catch (error: any) {
-      alert(error.message || "Registration failed");
+      await notifyError(error.message || "Registration failed");
     } finally {
       setIsLoading(false);
     }

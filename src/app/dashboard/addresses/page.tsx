@@ -1,13 +1,29 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { MapPin, Edit, Plus, Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { MapPin, Edit, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { motion } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import dynamic from "next/dynamic";
+import { useNotification } from "@/hooks/useNotification";
+
+type Address = {
+  id: string;
+  label: string;
+  street: string;
+  city: string;
+  state?: string;
+  zipCode: string;
+  country: string;
+};
+
+type UserWithAddresses = {
+  address?: Address[];
+  [key: string]: unknown;
+};
 import {
   Dialog,
   DialogContent,
@@ -19,11 +35,16 @@ import {
 
 const LocationPicker = dynamic(() => import("@/components/dashboard/LocationPicker"), {
   ssr: false,
-  loading: () => <div className="h-[250px] w-full bg-slate-100 animate-pulse rounded-2xl flex items-center justify-center text-muted-foreground font-medium">Loading Map...</div>
+  loading: () => <div className="h-62.5 w-full bg-slate-100 animate-pulse rounded-2xl flex items-center justify-center text-muted-foreground font-medium">Loading Map...</div>
 });
 
 export default function AddressesPage() {
-  const [user, setUser] = useState<any>(null);
+  const { success: notifySuccess, error: notifyError, confirm } = useNotification();
+  const [user, setUser] = useState<UserWithAddresses | null>(() => {
+    if (typeof window === "undefined") return null;
+    const userData = localStorage.getItem("user");
+    return userData ? (JSON.parse(userData) as UserWithAddresses) : null;
+  });
   const [isAddAddressOpen, setIsAddAddressOpen] = useState(false);
   const [newAddress, setNewAddress] = useState({
     label: "Home",
@@ -32,13 +53,6 @@ export default function AddressesPage() {
     zipCode: "",
     country: "Bangladesh"
   });
-
-  useEffect(() => {
-    const userData = localStorage.getItem("user");
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
 
   const handleAddAddress = async () => {
     try {
@@ -59,16 +73,18 @@ export default function AddressesPage() {
           zipCode: "",
           country: "Bangladesh"
         });
-        alert("Address added successfully!");
+        await notifySuccess("Address added successfully!");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Add address error:", error);
-      alert("Failed to add address: " + (error.message || "Unknown error"));
+      const message = error instanceof Error ? error.message : String(error);
+      await notifyError("Failed to add address: " + (message || "Unknown error"));
     }
   };
 
   const handleDeleteAddress = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this address?")) return;
+    const confirmed = await confirm("Are you sure you want to delete this address?");
+    if (!confirmed) return;
     try {
       const res = await apiFetch(`/users/addresses/${id}`, {
         method: "DELETE"
@@ -78,11 +94,12 @@ export default function AddressesPage() {
         const updatedUser = { ...user, address: res.addresses };
         setUser(updatedUser);
         localStorage.setItem("user", JSON.stringify(updatedUser));
-        alert("Address deleted successfully!");
+        await notifySuccess("Address deleted successfully!");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Delete address error:", error);
-      alert("Failed to delete address: " + (error.message || "Unknown error"));
+      const message = error instanceof Error ? error.message : String(error);
+      await notifyError("Failed to delete address: " + (message || "Unknown error"));
     }
   };
 
@@ -101,7 +118,7 @@ export default function AddressesPage() {
               <Plus className="w-4 h-4" /> Add New Address
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[520px] max-h-[90vh] w-full rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
+          <DialogContent className="sm:max-w-130 max-h-[90vh] w-full rounded-4xl p-0 overflow-hidden border-none shadow-2xl">
             <div className="flex flex-col max-h-[85vh] overflow-hidden">
               <DialogHeader className="p-8 bg-primary text-white">
                 <DialogTitle className="text-2xl font-black flex items-center gap-2">
@@ -184,8 +201,8 @@ export default function AddressesPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
-        {user?.address?.length > 0 ? (
-          user.address.map((addr: any, index: number) => (
+        {user?.address?.length ?? 0 > 0 ? (
+          user.address?.map((addr: Address, index: number) => (
             <Card key={index} className="border-none shadow-lg rounded-3xl bg-white dark:bg-slate-900 p-6 relative group">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-10 h-10 bg-slate-100 dark:bg-slate-800 rounded-xl flex items-center justify-center text-slate-500">
