@@ -101,14 +101,15 @@ export default function AddressesPage() {
               <Plus className="w-4 h-4" /> Add New Address
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px] rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
-            <DialogHeader className="p-8 bg-primary text-white">
-              <DialogTitle className="text-2xl font-black flex items-center gap-2">
-                <MapPin className="w-6 h-6" /> Add Shipping Address
-              </DialogTitle>
-            </DialogHeader>
-            <div className="p-8 space-y-6">
-              <div className="grid grid-cols-2 gap-4">
+          <DialogContent className="sm:max-w-[520px] max-h-[90vh] w-full rounded-[2rem] p-0 overflow-hidden border-none shadow-2xl">
+            <div className="flex flex-col max-h-[85vh] overflow-hidden">
+              <DialogHeader className="p-8 bg-primary text-white">
+                <DialogTitle className="text-2xl font-black flex items-center gap-2">
+                  <MapPin className="w-6 h-6" /> Add Shipping Address
+                </DialogTitle>
+              </DialogHeader>
+              <div className="p-8 space-y-6 overflow-y-auto max-h-[calc(85vh-200px)]">
+                <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Address Label</label>
                   <Input
@@ -177,6 +178,7 @@ export default function AddressesPage() {
                 Save Address
               </Button>
             </DialogFooter>
+          </div>
           </DialogContent>
         </Dialog>
       </div>

@@ -85,7 +85,7 @@ export default function LocationPicker({ onLocationSelect }: LocationPickerProps
   }, []);
 
   return (
-    <div className="h-[250px] w-full rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 relative z-0">
+    <div className="h-[180px] w-full rounded-2xl overflow-hidden border-2 border-slate-100 dark:border-slate-800 relative z-0">
       <MapContainer 
         center={position} 
         zoom={13} 
