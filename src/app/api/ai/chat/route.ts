@@ -6,7 +6,9 @@ export async function POST(request: NextRequest) {
 
     // Forward to backend API
     const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
-    const response = await fetch(`${backendUrl}/api/ai/chat`, {
+    const backendApiUrl = new URL('/api/ai/chat', backendUrl).toString();
+
+    const response = await fetch(backendApiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

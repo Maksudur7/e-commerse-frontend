@@ -43,6 +43,11 @@ export function ChatAssistant() {
     setIsTyping(true);
 
     try {
+      const requestMessages = [...messages, userMessage].map(m => ({
+        role: m.role,
+        content: m.content
+      }));
+
       const response = await fetch('/api/ai/chat', {
         method: 'POST',
         headers: {
@@ -50,10 +55,7 @@ export function ChatAssistant() {
         },
         body: JSON.stringify({
           query: input,
-          messages: messages.map(m => ({
-            role: m.role,
-            content: m.content
-          })),
+          messages: requestMessages,
           context: {
             userProfile: {
               joinedDate: new Date().toLocaleDateString()

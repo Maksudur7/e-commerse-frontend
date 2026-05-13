@@ -41,7 +41,11 @@ export const metadata: Metadata = {
     description: "The future of artisanal shopping is here.",
     images: ["https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&q=80&w=1200"],
     creator: "@shopease"
-  }
+  },
+  icons: [
+    { rel: "icon", url: "/favicon.svg", type: "image/svg+xml" },
+    { rel: "apple-touch-icon", url: "/favicon.svg" }
+  ]
 };
 
 export default function RootLayout({
