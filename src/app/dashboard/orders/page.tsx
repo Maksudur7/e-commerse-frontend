@@ -121,6 +121,41 @@ export default function OrdersPage() {
   const formatOrderId = (orderNumber: string) =>
     `ORD-${orderNumber.substring(0, 7).toUpperCase()}`;
 
+  const handleDownloadInvoice = () => {
+    if (!selectedOrder) return;
+
+    const itemsText = selectedOrder.items?.map((item: any) => 
+      `${item.variant?.product?.name || 'Product'} (x${item.quantity}) - $${Number(item.price).toFixed(2)}`
+    ).join("\n") || "No items";
+
+    const invoiceContent = `
+=========================================
+          SHOPEASE INVOICE
+=========================================
+Order ID: ${selectedOrder.orderNumber || selectedOrder.id}
+Date: ${new Date(selectedOrder.createdAt).toLocaleDateString()}
+Status: ${selectedOrder.status}
+-----------------------------------------
+Items:
+${itemsText}
+-----------------------------------------
+Total Amount: $${Number(selectedOrder.totalAmount).toFixed(2)}
+Payment Method: ${selectedOrder.paymentMethod || "N/A"}
+=========================================
+Thank you for shopping with ShopEase!
+    `.trim();
+
+    const blob = new Blob([invoiceContent], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `Invoice_${selectedOrder.orderNumber || "Order"}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-32">
@@ -312,6 +347,7 @@ export default function OrdersPage() {
                   <Button
                     variant="outline"
                     size="sm"
+                    onClick={handleDownloadInvoice}
                     className="rounded-xl font-bold gap-2 border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300"
                   >
                     <Download className="w-4 h-4" />
