@@ -7,15 +7,25 @@ import { Badge } from "@/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { useCartStore } from "@/store/useCartStore";
 
 export default function WishlistPage() {
   const router = useRouter();
+  const addItemToCartStore = useCartStore((state) => state.addItem);
   const [wishlist, setWishlist] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
   const [addingToCart, setAddingToCart] = useState<string | null>(null);
   const [cartSuccess, setCartSuccess] = useState<string | null>(null);
+  const [quantities, setQuantities] = useState<Record<string, number>>({});
+
+  const updateQuantity = (id: string, delta: number) => {
+    setQuantities(prev => ({
+      ...prev,
+      [id]: Math.max(1, (prev[id] || 1) + delta)
+    }));
+  };
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -63,31 +73,32 @@ export default function WishlistPage() {
   };
 
   const handleAddToCart = async (item: any) => {
-    const variantId = item.variants?.[0]?.id;
-    if (!variantId) {
-      // No variant — go to product page to select one
-      router.push(`/product/${item.slug}`);
-      return;
-    }
+    const variantId = item.variants?.[0]?.id || item.id;
+    const selectedSize = item.variants?.[0]?.size || "9";
+    const selectedColor = item.variants?.[0]?.color || "White";
+    const qty = quantities[item.id] || 1;
 
     setAddingToCart(item.id);
-    try {
-      const res = await apiFetch("/cart-orders/cart/add", {
-        method: "POST",
-        body: JSON.stringify({ variantId, quantity: 1 })
-      });
-      console.log("Add to cart response:", res);
-      if (res.success) {
-        setCartSuccess(item.id);
-        setTimeout(() => setCartSuccess(null), 2500);
-      }
-    } catch (err: any) {
-      console.error("Add to cart error:", err.message);
-      // Fallback: navigate to product page
-      router.push(`/product/${item.slug}`);
-    } finally {
-      setAddingToCart(null);
-    }
+    
+    // Add directly to the global Cart Store
+    addItemToCartStore({
+      variantId: variantId,
+      productId: item.id,
+      name: item.name,
+      price: item.basePrice || 0,
+      image: getImage(item),
+      quantity: qty,
+      size: selectedSize,
+      color: selectedColor,
+    });
+
+    setCartSuccess(item.id);
+    
+    // Auto-remove from wishlist
+    await removeFromWishlist(item.id);
+    
+    setTimeout(() => setCartSuccess(null), 2500);
+    setAddingToCart(null);
   };
 
   const getImage = (item: any) => {
@@ -201,7 +212,26 @@ export default function WishlistPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 mt-3">
+                    {/* Quantity Selector */}
+                    <div className="flex items-center bg-slate-100 dark:bg-slate-800 rounded-xl overflow-hidden border border-border/50 h-8">
+                      <button 
+                        onClick={() => updateQuantity(item.id, -1)}
+                        className="w-8 h-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-muted-foreground font-bold"
+                      >
+                        -
+                      </button>
+                      <span className="w-8 text-center text-xs font-bold">
+                        {quantities[item.id] || 1}
+                      </span>
+                      <button 
+                        onClick={() => updateQuantity(item.id, 1)}
+                        className="w-8 h-full flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-muted-foreground font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+
                     {/* Add to Cart */}
                     <Button
                       size="sm"
