@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { apiFetch } from "@/lib/api";
+import { useCartStore } from "@/store/useCartStore";
 
 
 
@@ -36,6 +37,7 @@ export function ProductCard({
 }: ProductCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const addItemToCartStore = useCartStore((state) => state.addItem);
 
   const router = useRouter();
   const toggleWishlist = async (e: React.MouseEvent) => {
@@ -76,8 +78,17 @@ export function ProductCard({
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    // In a real app, this would add to cart
-    alert(`${name} added to cart!`);
+    
+    addItemToCartStore({
+      variantId: id, // Fallback to product id since we don't have variants in ProductCard summary
+      productId: id,
+      name: name,
+      price: price || 0,
+      image: image,
+      quantity: 1,
+      size: "9", // Default size
+      color: "White" // Default color
+    });
   };
 
   return (
