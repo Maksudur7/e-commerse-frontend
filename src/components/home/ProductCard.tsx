@@ -42,8 +42,10 @@ export function ProductCard({
     e.preventDefault();
     e.stopPropagation();
     
+    console.log("Toggle wishlist clicked for product:", id);
     const token = localStorage.getItem("token");
     if (!token) {
+      console.log("No token found, redirecting to login");
       router.push("/auth/login");
       return;
     }
@@ -53,11 +55,13 @@ export function ProductCard({
     setIsWishlisted(!previousState);
 
     try {
+      console.log("Sending wishlist toggle request...");
       const res = await apiFetch("/wishlist/toggle", {
         method: "POST",
-        body: JSON.stringify({ productId: id })
+        body: JSON.stringify({ productId: id, image: image })
       });
       
+      console.log("Wishlist toggle response:", res);
       if (!res.success) {
         setIsWishlisted(previousState);
       }
