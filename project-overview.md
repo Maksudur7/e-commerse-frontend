@@ -4,7 +4,7 @@
 
 ## 1. Live Project
 
-- Frontend Live URL: `https://github.com/Maksudur7/e-commerse-frontend`
+- Frontend Live URL: `https://e-commerse-frontend-theta.vercel.app`
 - Backend Live URL: `https://server-five-gold-82.vercel.app`
 - Frontend GitHub Repository: `https://github.com/Maksudur7/e-commerse-frontend`
 - Backend GitHub Repository: `https://github.com/Maksudur7/e-commerse`
