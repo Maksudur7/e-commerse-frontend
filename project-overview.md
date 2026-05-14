@@ -4,21 +4,22 @@
 
 ## 1. Live Project
 
-- Frontend Live URL: `https://your-frontend-url.vercel.app`
-- Backend Live URL: `https://your-backend-url.up.railway.app`
-- GitHub Repository: `https://github.com/<your-username>/<your-repo>`
+- Frontend Live URL: `https://github.com/Maksudur7/e-commerse-frontend`
+- Backend Live URL: `https://server-five-gold-82.vercel.app`
+- Frontend GitHub Repository: `https://github.com/Maksudur7/e-commerse-frontend`
+- Backend GitHub Repository: `https://github.com/Maksudur7/e-commerse`
 
 > Replace the placeholder URLs above with your actual deployment links after you publish the app.
 
 ## 2. Demo Credentials
 
 ### Customer / Buyer
-- Email: `demo.user@shopease.com`
-- Password: `Demo@1234`
+- Email: `user@gmai.com`
+- Password: `user1234`
 
 ### Admin / Manager
-- Email: `admin@shopease.com`
-- Password: `Admin@1234`
+- Email: `admin@gmail.com`
+- Password: `admin1234`
 
 > If the demo accounts are not available in your database, create them through the registration endpoint or database seed script.
 
